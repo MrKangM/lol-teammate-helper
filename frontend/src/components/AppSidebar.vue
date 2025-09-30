@@ -1,7 +1,9 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from "vue"
 import type { SidebarProps } from '@/components/ui/sidebar'
 import type { IplayerBaseData } from '@/interface/baseData'
+import type { IRankedStats } from "@/interface/rankData"
+import type { LucideIcon } from "lucide-vue-next"
 
 import {
   AudioWaveform,
@@ -18,7 +20,6 @@ import {
 import NavMain from '@/components/NavMain.vue'
 import NavProjects from '@/components/NavProjects.vue'
 import NavUser from '@/components/NavUser.vue'
-import TeamSwitcher from '@/components/TeamSwitcher.vue'
 
 import {
   Sidebar,
@@ -28,16 +29,37 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 
+type NavSubItem = {
+  title: string
+  url: string
+}
+
+type NavItem = NavSubItem & {
+  icon?: LucideIcon
+  isActive?: boolean
+  items?: NavSubItem[]
+}
+
 type AppSidebarProps = SidebarProps & {
   avatarSrc?: string
   playerData?: IplayerBaseData
+  rankData?: IRankedStats
 }
+
+const emit = defineEmits<{
+  (event: "navigate", payload: { parent: NavItem; item: NavSubItem }): void
+}>()
 
 const props = withDefaults(defineProps<AppSidebarProps>(), {
   collapsible: "icon",
   avatarSrc: "",
   playerData: undefined,
+  rankData: undefined,
 })
+
+const handleNavNavigate = (payload: { parent: NavItem; item: NavSubItem }) => {
+  emit("navigate", payload)
+}
 
 const sanitize = (value?: string | null) => {
   const trimmed = value?.trim()
@@ -88,14 +110,14 @@ const defaultSidebarData = {
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Dashboard",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
           title: "History",
-          url: "#",
+          url: "hello-world",
         },
         {
           title: "Starred",
@@ -195,9 +217,13 @@ const defaultSidebarData = {
 const resolvedUser = computed(() => {
   const player = props.playerData
   const fallback = defaultSidebarData.user
-
   const name = resolvePlayerName(player) ?? fallback.name
-  const identifier = resolvePlayerIdentifier(player) ?? fallback.email
+
+  const soloQueue = props.rankData?.queueMap?.["RANKED_SOLO_5x5"]
+  const identifier = soloQueue
+    ? `${soloQueue.tier} ${soloQueue.division}`
+    : resolvePlayerIdentifier(player) ?? "\u672A\u5B9A\u7EA7"
+
   const avatar = sanitize(player?.iconImgSrc) ?? props.avatarSrc ?? fallback.avatar
 
   return {
@@ -217,17 +243,20 @@ const sidebarData = computed(() => ({
 <template>
   <Sidebar v-bind="props">
     <SidebarHeader>
-<!--      <TeamSwitcher :teams="sidebarData.teams" />-->
       <NavUser :user="sidebarData.user" />
     </SidebarHeader>
     <SidebarContent>
-      <NavMain :items="sidebarData.navMain" />
+      <NavMain :items="sidebarData.navMain" @navigate="handleNavNavigate" />
       <NavProjects :projects="sidebarData.projects" />
     </SidebarContent>
-    <SidebarFooter>
-<!--      <NavUser :user="sidebarData.user" />-->
-    </SidebarFooter>
+    <SidebarFooter />
     <SidebarRail />
   </Sidebar>
 </template>
+
+
+
+
+
+
 

@@ -60,8 +60,8 @@ func (pc *PlayerController) GetPlayerRankData(uuid string) types.RankedStats {
 		//return // 或者处理错误
 	}
 	utils.ConvertRankDataToChinese(&rankInfo)
-	utils.FormatRankInfo(rankInfo)
 	fmt.Println("====================================")
 	fmt.Println(rankInfo)
+	fmt.Println("总结信息：" + utils.FormatRankInfo(rankInfo))
 	return rankInfo
 }

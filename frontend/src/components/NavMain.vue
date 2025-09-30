@@ -17,18 +17,30 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 
-defineProps<{
-  items: {
-    title: string
-    url: string
-    icon?: LucideIcon
-    isActive?: boolean
-    items?: {
-      title: string
-      url: string
-    }[]
-  }[]
+type NavSubItem = {
+  title: string
+  url: string
+}
+
+type NavItem = {
+  title: string
+  url: string
+  icon?: LucideIcon
+  isActive?: boolean
+  items?: NavSubItem[]
+}
+
+const props = defineProps<{
+  items: NavItem[]
 }>()
+
+const emit = defineEmits<{
+  (event: 'navigate', payload: { parent: NavItem; item: NavSubItem }): void
+}>()
+
+const handleSubItemClick = (parent: NavItem, subItem: NavSubItem) => {
+  emit('navigate', { parent, item: subItem })
+}
 </script>
 
 <template>
@@ -36,7 +48,7 @@ defineProps<{
     <SidebarGroupLabel>Platform</SidebarGroupLabel>
     <SidebarMenu>
       <Collapsible
-        v-for="item in items"
+        v-for="item in props.items"
         :key="item.title"
         as-child
         :default-open="item.isActive"
@@ -52,11 +64,13 @@ defineProps<{
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarMenuSub>
-              <SidebarMenuSubItem v-for="subItem in item.items" :key="subItem.title">
-                <SidebarMenuSubButton as-child>
-                  <a :href="subItem.url">
-                    <span>{{ subItem.title }}</span>
-                  </a>
+              <SidebarMenuSubItem v-for="subItem in item.items ?? []" :key="subItem.title">
+                <SidebarMenuSubButton
+                  as="button"
+                  type="button"
+                  @click="handleSubItemClick(item, subItem)"
+                >
+                  <span>{{ subItem.title }}</span>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             </SidebarMenuSub>
