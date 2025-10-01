@@ -5,130 +5,115 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"lol-teammate-helper/internal/reqLib"
 	"net/http"
 )
 
-// App struct
+const (
+	localHost               = "https://127.0.0.1"
+	localPort               = 56737
+	summonerEndpoint        = "/lol-summoner/v1/current-summoner"
+	profileIconPathTemplate = "/lol-game-data/assets/v1/profile-icons/%d.jpg"
+	defaultProfileIconID    = 4804
+	jsonContentType         = "application/json"
+)
+
 type App struct {
-	ctx context.Context
+	ctx        context.Context
+	token      string
+	authHeader string
+	port       int
 }
 
-// NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{}
+	token := "iOkyLnA-zyiJNOB9cQ1svA"
+
+	return &App{
+		token:      token,
+		authHeader: encodeAuthHeader(token),
+		port:       localPort,
+	}
 }
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// Greet returns a greeting for the given name
-var port int = 56737
-var token string = "JaffTt5fcKeFztB5KHO4Hw"
-var baseDataUrl string = "/lol-summoner/v1/current-summoner"
-
 func (a *App) Greet(name string) string {
-	fmt.Println("app.go Greet")
-	url := fmt.Sprintf("https://127.0.0.1:%d%s", port, baseDataUrl)
-
-	// 创建HTTP客户端，跳过TLS证书验证（因为这是本地自签名证书）
-	//client := &http.Client{
-	//	Timeout: 10 * time.Second,
-	//	Transport: &http.Transport{
-	//		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	//	},
-	//}
-	client := reqLib.Instance().Client()
-
-	// 创建请求
-	req, err := http.NewRequest("GET", url, nil)
+	resp, err := a.doGet(summonerEndpoint)
 	if err != nil {
-		return fmt.Sprintf("创建请求失败: %v", err)
-	}
-
-	// 设置请求头
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-
-	// 创建Authorization头：Basic + base64("riot:token")
-	authString := "riot:" + token
-	encodedAuth := base64.StdEncoding.EncodeToString([]byte(authString))
-	req.Header.Set("Authorization", "Basic "+encodedAuth)
-	fmt.Println("Auth String:", encodedAuth)
-	// 发送请求
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Sprintf("请求失败: %v", err)
+		return err.Error()
 	}
 	defer resp.Body.Close()
 
-	// 读取响应体
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Sprintf("读取响应失败: %v", err)
+		return fmt.Sprintf("璇诲彇鍝嶅簲澶辫触: %v", err)
 	}
-
-	// 返回响应结果
-	result := fmt.Sprintf("状态码: %d\n响应体: %s", resp.StatusCode, string(body))
-	fmt.Println(result)
 
 	return string(body)
 }
 
-func (a *App) GetImgSrc() string {
-	url := "https://127.0.0.1:56737/lol-game-data/assets/v1/profile-icons/4804.jpg"
-
-	// 创建HTTP客户端，跳过TLS证书验证（因为这是本地自签名证书）
-	//client := &http.Client{
-	//	Timeout: 10 * time.Second,
-	//	Transport: &http.Transport{
-	//		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	//	},
-	//}
-	client := reqLib.Instance().Client()
-
-	// 创建请求
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return fmt.Sprintf("创建请求失败: %v", err)
+func (a *App) GetImgSrc(iconID int) string {
+	icon := iconID
+	if icon <= 0 {
+		icon = defaultProfileIconID
 	}
 
-	// 设置请求头
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	path := fmt.Sprintf(profileIconPathTemplate, icon)
 
-	// 创建Authorization头：Basic + base64("riot:token")
-	authString := "riot:" + token
-	encodedAuth := base64.StdEncoding.EncodeToString([]byte(authString))
-	req.Header.Set("Authorization", "Basic "+encodedAuth)
-
-	resp, err := client.Do(req)
+	resp, err := a.doGet(path)
 	if err != nil {
-		return fmt.Sprintf("请求失败: %v", err)
+		return err.Error()
 	}
 	defer resp.Body.Close()
 
-	// 检查HTTP状态码:cite[1]
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Sprintf("请求失败，状态码: %d", resp.StatusCode)
+		return fmt.Sprintf("璇锋眰澶辫触锛岀姸鎬佺爜: %d", resp.StatusCode)
 	}
 
-	// 读取图片数据:cite[1]:cite[3]
 	imgData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Sprintf("读取图片数据失败: %v", err)
+		return fmt.Sprintf("璇诲彇鍥剧墖鏁版嵁澶辫触: %v", err)
 	}
 
-	// 将图片数据转换为Base64字符串
-	base64Str := base64.StdEncoding.EncodeToString(imgData)
-	//fmt.Println("头像结果" + base64Str)
-	// 返回Base64编码的图片，可直接用于<img>标签的src属性
+	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(imgData)
+}
 
-	res := "data:image/jpeg;base64," + base64Str
-	//fmt.Println("头像地址：" + res)
-	return res
+func (a *App) doGet(path string) (*http.Response, error) {
+	req, err := a.newRequest(http.MethodGet, path)
+	if err != nil {
+		return nil, fmt.Errorf("鍒涘缓璇锋眰澶辫触: %w", err)
+	}
+
+	resp, err := reqLib.Instance().Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("璇锋眰澶辫触: %w", err)
+	}
+
+	return resp, nil
+}
+
+func (a *App) newRequest(method, path string) (*http.Request, error) {
+	url := a.buildURL(path)
+
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", jsonContentType)
+	req.Header.Set("Accept", jsonContentType)
+	req.Header.Set("Authorization", a.authHeader)
+
+	return req, nil
+}
+
+func (a *App) buildURL(path string) string {
+	return fmt.Sprintf("%s:%d%s", localHost, a.port, path)
+}
+
+func encodeAuthHeader(token string) string {
+	credential := "riot:" + token
+	return "Basic " + base64.StdEncoding.EncodeToString([]byte(credential))
 }

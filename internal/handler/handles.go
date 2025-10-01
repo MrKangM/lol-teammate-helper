@@ -9,7 +9,7 @@ import (
 // AppBinding defines the behaviour the handler expects from the Wails App backend.
 type AppBinding interface {
 	Greet(name string) string
-	GetImgSrc() string
+	GetImgSrc(iconID int) string
 }
 
 // Handles exposes API entrypoints that delegate to the bound App implementation.
@@ -63,13 +63,13 @@ func (h *Handles) Greet(name string) (string, error) {
 }
 
 // GetImgSrc proxies the call to the bound App implementation.
-func (h *Handles) GetImgSrc() (string, error) {
+func (h *Handles) GetImgSrc(iconID int) (string, error) {
 	app, err := h.currentApp()
 	if err != nil {
 		return "", err
 	}
 
-	return app.GetImgSrc(), nil
+	return app.GetImgSrc(iconID), nil
 }
 
 func (h *Handles) currentApp() (AppBinding, error) {
