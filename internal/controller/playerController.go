@@ -11,64 +11,85 @@ import (
 	"net/http"
 )
 
+type CredentialsProvider interface {
+	RiotPort() int
+	RiotToken() string
+}
+
 type PlayerController struct {
+	provider CredentialsProvider
+}
+
+func NewPlayerController(provider CredentialsProvider) *PlayerController {
+	return &PlayerController{provider: provider}
 }
 
 func (pc *PlayerController) GetPlayerRankData(uuid string) types.RankedStats {
-	const (
-		defaultPort   = 56737
-		defaultToken  = "iOkyLnA-zyiJNOB9cQ1svA"
-		fallbackPUUID = "637f3866-b9ad-5f33-81b4-1d7c393cc770"
-	)
-
-	identifier := uuid
-	if len(identifier) == 0 {
-		identifier = fallbackPUUID
+	if uuid == "" {
+		fmt.Println("player controller: empty uuid provided")
+		return types.RankedStats{}
 	}
 
-	url := fmt.Sprintf("https://127.0.0.1:%d/lol-ranked/v1/ranked-stats/%s", defaultPort, identifier)
-	fmt.Println("排位数据URL:" + url)
+	provider := pc.provider
+	if provider == nil {
+		fmt.Println("player controller: riot credentials provider is not configured")
+		return types.RankedStats{}
+	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	port := provider.RiotPort()
+	token := provider.RiotToken()
+	if port <= 0 {
+		fmt.Println("player controller: riot port unavailable")
+		return types.RankedStats{}
+	}
+	if token == "" {
+		fmt.Println("player controller: riot token unavailable")
+		return types.RankedStats{}
+	}
+
+	url := fmt.Sprintf("https://127.0.0.1:%d/lol-ranked/v1/ranked-stats/%s", port, uuid)
+	fmt.Println("閹烘帊缍呴弫鐗堝祦URL:" + url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		fmt.Printf("创建排位请求失败: %v\n", err)
+		fmt.Printf("閸掓稑缂撻幒鎺嶇秴鐠囬攱鐪版径杈Е: %v\n", err)
 		return types.RankedStats{}
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	authString := "riot:" + defaultToken
+	authString := "riot:" + token
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(authString)))
 
 	resp, err := reqLib.Instance().Do(req)
 	if err != nil {
-		fmt.Printf("请求排位数据失败: %v\n", err)
+		fmt.Printf("鐠囬攱鐪伴幒鎺嶇秴閺佺増宓佹径杈Е: %v\n", err)
 		return types.RankedStats{}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("排位请求返回非200状态: %d\n", resp.StatusCode)
+		fmt.Printf("ranked stats request returned status %d\n", resp.StatusCode)
 		return types.RankedStats{}
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("读取排位响应失败: %v\n", err)
+		fmt.Printf("鐠囪褰囬幒鎺嶇秴閸濆秴绨叉径杈Е: %v\n", err)
 		return types.RankedStats{}
 	}
 
 	var rankInfo types.RankedStats
 	if err := json.Unmarshal(body, &rankInfo); err != nil {
-		fmt.Printf("解析排位数据失败: %v\n", err)
+		fmt.Printf("鐟欙絾鐎介幒鎺嶇秴閺佺増宓佹径杈Е: %v\n", err)
 		return types.RankedStats{}
 	}
 
 	utils.ConvertRankDataToChinese(&rankInfo)
 	fmt.Println("====================================")
 	fmt.Println(rankInfo)
-	fmt.Println("总结信息:" + utils.FormatRankInfo(rankInfo))
+	fmt.Println("閹崵绮ㄦ穱鈩冧紖:" + utils.FormatRankInfo(rankInfo))
 
 	return rankInfo
 }

@@ -16,8 +16,6 @@ type RequestLib struct {
 var (
 	requestLibOnce      sync.Once
 	requestLibSingleton *RequestLib
-	port                int8
-	token               string
 )
 
 // Instance returns the singleton RequestLib instance, constructing it on first use.
