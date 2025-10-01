@@ -4,3 +4,7 @@
 export function GetImgSrc(arg1:number):Promise<string>;
 
 export function Greet(arg1:string):Promise<string>;
+
+export function RiotPort():Promise<number>;
+
+export function RiotToken():Promise<string>;
