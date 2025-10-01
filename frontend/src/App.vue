@@ -5,7 +5,7 @@ export const containerClass = "w-full h-full"
 </script>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import AppSidebar from "@/components/AppSidebar.vue"
 import HelloWorld from "@/components/HelloWorld.vue"
 import {
@@ -31,9 +31,28 @@ const playerData = ref<IplayerBaseData | null>(null)
 const rankData = ref<IRankedStats>()
 const activePanel = ref<"dashboard" | "helloWorld">("dashboard")
 const isLoading = ref(true)
+const retryTimer = ref<number | null>(null)
+const retryCount = ref(0)
 
 const hasPlayerData = computed(() => playerData.value !== null)
 const showClientPrompt = computed(() => isLoading.value || !hasPlayerData.value)
+
+const RETRY_DELAY_MS = 2000
+const overlayTitle = "请打开游戏客户端后再启动本软件"
+const overlaySubtitle = "正在尝试获取召唤师资料，请确认英雄联盟客户端已登录。"
+const overlayRetryPrefix = "已尝试重新连接"
+const overlayRetrySuffix = "次，将继续自动重试…"
+
+onMounted(() => {
+  loadPlayerData()
+})
+
+onBeforeUnmount(() => {
+  if (retryTimer.value !== null) {
+    clearTimeout(retryTimer.value)
+    retryTimer.value = null
+  }
+})
 
 async function waitForBackendBridge(maxAttempts = 50, delay = 100) {
   let attempts = 0
@@ -46,9 +65,6 @@ async function waitForBackendBridge(maxAttempts = 50, delay = 100) {
   }
   return true
 }
-onMounted(() => {
-  loadPlayerData()
-})
 
 const parsePlayerData = (raw: unknown): Partial<IplayerBaseData> => {
   if (typeof raw === "string") {
@@ -67,23 +83,43 @@ const parsePlayerData = (raw: unknown): Partial<IplayerBaseData> => {
   return {}
 }
 
+function scheduleReload() {
+  if (retryTimer.value !== null) {
+    clearTimeout(retryTimer.value)
+  }
+
+  retryTimer.value = window.setTimeout(() => {
+    retryCount.value += 1
+    loadPlayerData()
+  }, RETRY_DELAY_MS)
+}
+
 async function loadPlayerData() {
   isLoading.value = true
+
   try {
     const bridgeReady = await waitForBackendBridge()
     if (!bridgeReady) {
-      console.warn('backend bridge unavailable; run "wails dev" or start the built app to enable backend APIs.')
+      console.warn("backend bridge unavailable; run wails dev or start the packaged app.")
+      scheduleReload()
       return
     }
 
-    const rawBaseData = await Greet("test")
+    let rawBaseData: unknown
+    try {
+      rawBaseData = await Greet("load-player")
+    } catch (requestError) {
+      console.error("failed to fetch summoner data", requestError)
+      scheduleReload()
+      return
+    }
+
     const parsedBaseData = parsePlayerData(rawBaseData)
     const hasBaseData = Object.keys(parsedBaseData).length > 0
 
     if (!hasBaseData) {
-      playerData.value = null
-      rankData.value = undefined
       console.warn("player data unavailable; waiting for League client")
+      scheduleReload()
       return
     }
 
@@ -94,7 +130,7 @@ async function loadPlayerData() {
     try {
       const iconIdForRequest = profileIconId ?? 0
       const iconResponse = await GetImgSrc(iconIdForRequest)
-      if (typeof iconResponse === "string" && iconResponse.length > 0) {
+      if (typeof iconResponse === "string" && iconResponse.startsWith("data:image")) {
         iconImgSrc = iconResponse
       }
     } catch (iconError) {
@@ -106,8 +142,6 @@ async function loadPlayerData() {
       iconImgSrc,
     }
 
-    console.log("player data", playerData.value)
-
     const rankIdentifier =
       playerData.value.puuid ??
       playerData.value.accountId ??
@@ -116,7 +150,7 @@ async function loadPlayerData() {
     if (rankIdentifier) {
       try {
         rankData.value = await GetPlayerRankData(rankIdentifier)
-        console.log("player rank data", rankData.value)
+        console.log(`API获取的排位数据:${JSON.stringify(rankData)}`)
       } catch (rankError) {
         console.error("failed to fetch player rank data", rankError)
       }
@@ -124,12 +158,19 @@ async function loadPlayerData() {
       rankData.value = undefined
       console.warn("missing identifier for rank data")
     }
+
+    if (retryTimer.value !== null) {
+      clearTimeout(retryTimer.value)
+      retryTimer.value = null
+    }
+
+    retryCount.value = 0
+    isLoading.value = false
   } catch (error) {
     console.error("failed to initialise player data", error)
     playerData.value = null
     rankData.value = undefined
-  } finally {
-    isLoading.value = false
+    scheduleReload()
   }
 }
 
@@ -154,21 +195,31 @@ const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
 </script>
 
 <template>
-  <div class="h-full w-full">
+  <div class="relative h-full w-full">
     <div
       v-if="showClientPrompt"
-      class="flex h-full flex-col items-center justify-center gap-6 bg-muted/50 p-8 text-center"
+      class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/95 px-6 text-center backdrop-blur-sm"
     >
       <div class="flex flex-col items-center gap-4">
         <div
-          class="h-12 w-12 animate-spin rounded-full border-4 border-slate-300 border-t-transparent"
+          class="h-14 w-14 animate-spin rounded-full border-4 border-muted-foreground/40 border-t-primary"
           aria-hidden="true"
         />
-        <p class="text-lg font-semibold text-foreground">请打开游戏客户端后再打开本软件</p>
-        <p class="text-sm text-muted-foreground">正在尝试获取召唤师数据，请确保英雄联盟客户端已登录。</p>
+        <div class="space-y-2">
+          <p class="text-xl font-semibold text-foreground">
+            {{ overlayTitle }}
+          </p>
+          <p class="text-sm text-muted-foreground">
+            {{ overlaySubtitle }}
+          </p>
+          <p v-if="retryCount > 0" class="text-xs text-muted-foreground/70">
+            {{ overlayRetryPrefix }} {{ retryCount }} {{ overlayRetrySuffix }}
+          </p>
+        </div>
       </div>
     </div>
-    <SidebarProvider v-else>
+
+    <SidebarProvider v-else :default-open="true">
       <AppSidebar
         :avatar-src="playerData?.iconImgSrc"
         :player-data="playerData ?? undefined"

@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed } from "vue"
-import type { SidebarProps } from '@/components/ui/sidebar'
-import type { IplayerBaseData } from '@/interface/baseData'
+import type { SidebarProps } from "@/components/ui/sidebar"
+import type { IplayerBaseData } from "@/interface/baseData"
 import type { IRankedStats } from "@/interface/rankData"
 import type { LucideIcon } from "lucide-vue-next"
 
@@ -17,9 +17,9 @@ import {
   Settings2,
   SquareTerminal,
 } from "lucide-vue-next"
-import NavMain from '@/components/NavMain.vue'
-import NavProjects from '@/components/NavProjects.vue'
-import NavUser from '@/components/NavUser.vue'
+import NavMain from "@/components/NavMain.vue"
+import NavProjects from "@/components/NavProjects.vue"
+import NavUser from "@/components/NavUser.vue"
 
 import {
   Sidebar,
@@ -27,7 +27,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from '@/components/ui/sidebar'
+} from "@/components/ui/sidebar"
 
 type NavSubItem = {
   title: string
@@ -80,9 +80,21 @@ const resolvePlayerName = (player?: IplayerBaseData) => {
   return sanitize(player.internalName)
 }
 
-const resolvePlayerIdentifier = (player?: IplayerBaseData) => {
-  if (!player) return undefined
-  return sanitize(player.puuid) ?? sanitize(player.accountId)
+const resolvePlayerRankLabel = (rankData?: IRankedStats): string | undefined => {
+  const entry = rankData?.queueMap?.["RANKED_SOLO_5x5"]
+  if (!entry) {
+    console.log(`数组不存在，${JSON.stringify(rankData?.queueMap)}`)
+    return undefined
+  }
+
+  const tier = sanitize(entry.tier)
+  const division = sanitize(entry.division)
+  console.log(`段位:${tier},阶级:${division}`)
+  if (tier && division) {
+    return `${tier} ${division}`
+  }
+
+  return tier ?? division ?? undefined
 }
 
 const defaultSidebarData = {
@@ -219,11 +231,9 @@ const resolvedUser = computed(() => {
   const fallback = defaultSidebarData.user
   const name = resolvePlayerName(player) ?? fallback.name
 
-  const soloQueue = props.rankData?.queueMap?.["RANKED_SOLO_5x5"]
-  const identifier = soloQueue
-    ? `${soloQueue.tier} ${soloQueue.division}`
-    : resolvePlayerIdentifier(player) ?? "\u672A\u5B9A\u7EA7"
-
+  const rankLabel = resolvePlayerRankLabel(props.rankData)
+  console.log(`排位标签:${rankLabel}`)
+  const identifier = rankLabel ?? "未定级"
   const avatar = sanitize(player?.iconImgSrc) ?? props.avatarSrc ?? fallback.avatar
 
   return {
@@ -253,10 +263,3 @@ const sidebarData = computed(() => ({
     <SidebarRail />
   </Sidebar>
 </template>
-
-
-
-
-
-
-

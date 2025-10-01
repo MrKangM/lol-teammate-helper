@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from "vue"
 import {
   BadgeCheck,
@@ -13,7 +13,7 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from '@/components/ui/avatar'
+} from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,13 +22,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from '@/components/ui/sidebar'
+} from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
 
 const props = defineProps<{
@@ -57,19 +57,19 @@ const tierColorMap = {
 type TierKey = keyof typeof tierColorMap
 
 const chineseToTierMap: Record<string, TierKey> = {
-  "\u9ed1\u94c1": "IRON",
-  "\u9752\u94dc": "BRONZE",
-  "\u767d\u94f6": "SILVER",
-  "\u9ec4\u91d1": "GOLD",
-  "\u767d\u91d1": "PLATINUM",
-  "\u7fe1\u7fe0": "EMERALD",
-  "\u94bb\u77f3": "DIAMOND",
-  "\u5927\u5e08": "MASTER",
-  "\u5b97\u5e08": "GRANDMASTER",
-  "\u738b\u8005": "CHALLENGER",
+  "黑铁": "IRON",
+  "青铜": "BRONZE",
+  "白银": "SILVER",
+  "黄金": "GOLD",
+  "白金": "PLATINUM",
+  "翡翠": "EMERALD",
+  "钻石": "DIAMOND",
+  "大师": "MASTER",
+  "宗师": "GRANDMASTER",
+  "王者": "CHALLENGER",
 }
 
-const UNRANKED_LABEL = "\u672a\u5b9a\u7ea7"
+const UNRANKED_LABEL = "未定级"
 const UNRANKED_CLASS = "border-transparent bg-muted text-muted-foreground"
 const DEFAULT_BADGE_CLASS = "border-transparent bg-secondary text-secondary-foreground"
 
@@ -125,15 +125,15 @@ const badgeClass = computed(() => {
             size="lg"
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <Avatar class="h-8 w-8 rounded-lg">
+            <Avatar class="h-12 w-12 rounded-full border border-white/10">
               <AvatarImage :src="user.avatar" :alt="user.name" />
-              <AvatarFallback class="rounded-lg">
+              <AvatarFallback class="rounded-full">
                 CN
               </AvatarFallback>
             </Avatar>
-            <div class="grid flex-1 text-left text-sm leading-tight">
-              <span class="truncate font-medium">{{ user.name }}</span>
-              <span class="truncate text-xs">
+            <div class="flex flex-1 flex-col text-left text-sm leading-tight">
+              <span class="truncate text-base font-semibold">{{ user.name }}</span>
+              <span class="mt-1 inline-flex">
                 <Badge :class="badgeClass">{{ badgeValue }}</Badge>
               </span>
             </div>
@@ -147,16 +147,18 @@ const badgeClass = computed(() => {
           :side-offset="4"
         >
           <DropdownMenuLabel class="p-0 font-normal">
-            <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-              <Avatar class="h-8 w-8 rounded-lg">
+            <div class="flex items-center gap-3 px-1 py-1.5 text-left text-sm">
+              <Avatar class="h-12 w-12 rounded-full border border-white/10">
                 <AvatarImage :src="user.avatar" :alt="user.name" />
-                <AvatarFallback class="rounded-lg">
+                <AvatarFallback class="rounded-full">
                   CN
                 </AvatarFallback>
               </Avatar>
-              <div class="grid flex-1 text-left text-sm leading-tight">
-                <span class="truncate font-semibold">{{ user.name }}</span>
-                <span class="truncate text-xs">{{ badgeValue }}</span>
+              <div class="flex flex-1 flex-col text-left leading-tight">
+                <span class="truncate text-base font-semibold">{{ user.name }}</span>
+                <span class="mt-1 inline-flex text-xs">
+                  <Badge :class="badgeClass">{{ badgeValue }}</Badge>
+                </span>
               </div>
             </div>
           </DropdownMenuLabel>
