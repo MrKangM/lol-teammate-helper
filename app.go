@@ -48,7 +48,7 @@ func (a *App) Greet(name string) string {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Sprintf("璇诲彇鍝嶅簲澶辫触: %v", err)
+		return fmt.Sprintf("读取响应失败: %v", err)
 	}
 
 	return string(body)
@@ -69,12 +69,12 @@ func (a *App) GetImgSrc(iconID int) string {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Sprintf("璇锋眰澶辫触锛岀姸鎬佺爜: %d", resp.StatusCode)
+		return fmt.Sprintf("请求失败，状态码: %d", resp.StatusCode)
 	}
 
 	imgData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Sprintf("璇诲彇鍥剧墖鏁版嵁澶辫触: %v", err)
+		return fmt.Sprintf("读取图片数据失败: %v", err)
 	}
 
 	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(imgData)
@@ -83,12 +83,12 @@ func (a *App) GetImgSrc(iconID int) string {
 func (a *App) doGet(path string) (*http.Response, error) {
 	req, err := a.newRequest(http.MethodGet, path)
 	if err != nil {
-		return nil, fmt.Errorf("鍒涘缓璇锋眰澶辫触: %w", err)
+		return nil, fmt.Errorf("创建请求失败: %w", err)
 	}
 
 	resp, err := reqLib.Instance().Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("璇锋眰澶辫触: %w", err)
+		return nil, fmt.Errorf("请求失败: %w", err)
 	}
 
 	return resp, nil
