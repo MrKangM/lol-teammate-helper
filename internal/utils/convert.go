@@ -124,3 +124,22 @@ func getQueueChineseName(queueType string) string {
 	}
 	return queueType
 }
+
+func GetServerChineseName(serverName string) string {
+	serverMap := map[string]string{
+		"HN1":   "艾欧尼亚",
+		"HN10":  "黑色玫瑰",
+		"TJ100": "联盟四区",
+		"TJ101": "联盟五区",
+		"NJ100": "联盟一区",
+		"GZ100": "联盟二区",
+		"CQ100": "联盟三区",
+		"BGP2":  "峡谷之巅",
+		"PBE":   "体验服",
+	}
+
+	if name, ok := serverMap[serverName]; ok {
+		return name
+	}
+	return serverName
+}

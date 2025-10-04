@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"lol-teammate-helper/internal/config"
+	"lol-teammate-helper/internal/types"
 	"net/http"
 	"os/exec"
 	"regexp"
@@ -24,38 +26,43 @@ type App struct {
 }
 
 func NewApp() *App {
-	port, token, err := detectRiotCredentials()
+	port, token, region, err := detectRiotCredentials()
 	if err != nil {
 		fmt.Printf("[app.NewApp] failed to detect Riot credentials: %v\n", err)
 	} else {
-		config.InitInstance(port, token)
-		fmt.Printf("[app.NewApp] detected Riot client on port %d\n", port)
+		config.InitInstance(port, token, region)
+		fmt.Printf("[app.NewApp] detected Riot client on port %d (region %s)\n", port, region)
 	}
 
 	return &App{}
 }
-
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-func (a *App) Greet(name string) string {
+func (a *App) Greet(name string) types.IPlayerBaseData {
 	const logPrefix = "[app.Greet]"
 
 	cfg, ok := config.Instance()
 	if !ok {
 		fmt.Println(logPrefix + " config not initialised; returning empty payload")
-		return ""
+		return types.IPlayerBaseData{}
 	}
 
 	resp, err := cfg.SendHttpRequest(summonerEndpoint, http.MethodGet)
 	if err != nil {
 		fmt.Printf("%s request failed: %v\n", logPrefix, err)
-		return fmt.Sprintf("%s request failed", logPrefix)
+		return types.IPlayerBaseData{}
 	}
 
 	fmt.Printf("%s received %d bytes of summoner data\n", logPrefix, len(resp))
-	return string(resp)
+	var baseData types.IPlayerBaseData
+	if err := json.Unmarshal(resp, &baseData); err != nil {
+		fmt.Printf("%s unmarshal failed: %v\n", logPrefix, err)
+		return types.IPlayerBaseData{}
+	}
+	baseData.Region = cfg.Region
+	return baseData
 }
 
 func (a *App) GetImgSrc(iconID int) string {
@@ -83,27 +90,32 @@ func (a *App) GetImgSrc(iconID int) string {
 	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(resp)
 }
 
-func detectRiotCredentials() (int, string, error) {
+func detectRiotCredentials() (int, string, string, error) {
 	cmd := exec.Command("wmic", "PROCESS", "WHERE", "name='LeagueClientUx.exe'", "GET", "commandline")
 	output, err := cmd.Output()
 	if err != nil {
-		return 0, "", err
+		return 0, "", "", err
 	}
 
 	text := strings.ReplaceAll(string(output), "\r", "\n")
 
 	port, err := extractPort(text)
 	if err != nil {
-		return 0, "", err
+		return 0, "", "", err
 	}
 
 	token, err := extractToken(text)
 	if err != nil {
-		return 0, "", err
+		return 0, "", "", err
 	}
 
-	fmt.Printf("[app.detectRiotCredentials] detected port %d (token length %d)\n", port, len(token))
-	return port, token, nil
+	region, err := extractRegion(text)
+	if err != nil {
+		return 0, "", "", err
+	}
+
+	fmt.Printf("[app.detectRiotCredentials] detected port %d (token length %d, region %s)\n", port, len(token), region)
+	return port, token, region, nil
 }
 
 func extractPort(text string) (int, error) {
@@ -126,6 +138,16 @@ func extractToken(text string) (string, error) {
 	match := re.FindStringSubmatch(text)
 	if len(match) != 2 {
 		return "", errors.New("auth token not found")
+	}
+
+	return strings.TrimSpace(match[1]), nil
+}
+
+func extractRegion(text string) (string, error) {
+	re := regexp.MustCompile(`(?i)--rso_platform_id[=\s]+([\w-]+)`)
+	match := re.FindStringSubmatch(text)
+	if len(match) != 2 {
+		return "", errors.New("platform id not found")
 	}
 
 	return strings.TrimSpace(match[1]), nil

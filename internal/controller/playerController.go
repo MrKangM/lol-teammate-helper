@@ -48,6 +48,6 @@ func (pc *PlayerController) GetPlayerRankData(uuid string) types.RankedStats {
 	fmt.Println(logPrefix + " ====================================")
 	fmt.Printf("%s raw response: %#v\n", logPrefix, rankInfo)
 	fmt.Println(logPrefix + " summary: " + utils.FormatRankInfo(rankInfo))
-
+	//GetPlayerRankMatches(uuid)
 	return rankInfo
 }

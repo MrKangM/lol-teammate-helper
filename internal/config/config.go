@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"lol-teammate-helper/internal/utils"
 	"net/http"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ type AppConfig struct {
 	Port      int    `json:"port"`
 	Token     string `json:"token"`
 	MetaToken string `json:"meta_token"`
+	Region    string `json:"region"`
 }
 
 var (
@@ -29,15 +31,17 @@ var (
 	once     sync.Once
 )
 
-func InitInstance(port int, token string) {
+func InitInstance(port int, token string, region string) {
 	once.Do(func() {
 		authString := "riot:" + token
+		chineseRegion := utils.GetServerChineseName(region)
 		instance = &AppConfig{
 			Port:      port,
 			Token:     "Basic " + base64.StdEncoding.EncodeToString([]byte(authString)),
 			MetaToken: token,
+			Region:    chineseRegion,
 		}
-		fmt.Printf("%s initialised config with port %d\n", initLogPrefix, port)
+		fmt.Printf("%s initialised config with port %d锛宼oken:%v\n", initLogPrefix, port, token)
 	})
 }
 
@@ -85,7 +89,7 @@ func (ac *AppConfig) SendHttpRequest(endpoint string, method string) ([]byte, er
 
 	req.Header.Set("Authorization", ac.Token)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", "*/*")
 
 	client := &http.Client{
 		Timeout: 30 * time.Second,
