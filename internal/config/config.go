@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"lol-teammate-helper/internal/connector"
 	"lol-teammate-helper/internal/utils"
 	"net/http"
 	"strings"
@@ -41,6 +42,7 @@ func InitInstance(port int, token string, region string) {
 			MetaToken: token,
 			Region:    chineseRegion,
 		}
+		go connector.Connection(instance.Port, instance.Token)
 		fmt.Printf("%s initialised config with port %d (region %s)\n", initLogPrefix, port, chineseRegion)
 	})
 }
