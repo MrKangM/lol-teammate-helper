@@ -1,7 +1,7 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from "vue"
 import type { SidebarProps } from "@/components/ui/sidebar"
-import type { IplayerBaseData } from "@/interface/baseData"
+import type { IPlayerBaseData } from "@/interface/baseData"
 import type { IRankedStats } from "@/interface/rankData"
 import type { LucideIcon } from "lucide-vue-next"
 
@@ -42,7 +42,7 @@ type NavItem = NavSubItem & {
 
 type AppSidebarProps = SidebarProps & {
   avatarSrc?: string
-  playerData?: IplayerBaseData
+  playerData?: IPlayerBaseData
   rankData?: IRankedStats
 }
 
@@ -66,7 +66,7 @@ const sanitize = (value?: string | null) => {
   return trimmed && trimmed.length > 0 ? trimmed : undefined
 }
 
-const resolvePlayerName = (player?: IplayerBaseData) => {
+const resolvePlayerName = (player?: IPlayerBaseData) => {
   if (!player) return undefined
 
   const displayName = sanitize(player.displayName)
