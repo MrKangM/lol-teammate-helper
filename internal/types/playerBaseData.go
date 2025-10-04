@@ -6,19 +6,19 @@ type IPlayerBaseData struct {
 	GameName                    string  `json:"gameName,omitempty"`
 	InternalName                string  `json:"internalName,omitempty"`
 	NameChangeFlag              bool    `json:"nameChangeFlag,omitempty"`
-	PercentCompleteForNextLevel int     `json:"percentCompleteForNextLevel,omitempty"` // 下一个等级百分比
+	PercentCompleteForNextLevel int     `json:"percentCompleteForNextLevel,omitempty"` // Percent progress towards next level
 	Privacy                     string  `json:"privacy,omitempty"`
-	ProfileIconId               int     `json:"profileIconId,omitempty"` // 头像ID
+	ProfileIconId               int     `json:"profileIconId,omitempty"`
 	Puuid                       string  `json:"puuid,omitempty"`
 	RerollPoints                IReroll `json:"rerollPoints,omitempty"`
 	SummonerId                  int64   `json:"summonerId,omitempty"`
-	SummonerLevel               int     `json:"summonerLevel,omitempty"` // 召唤师等级
+	SummonerLevel               int     `json:"summonerLevel,omitempty"` // Summoner level
 	TagLine                     string  `json:"tagLine,omitempty"`
 	Unnamed                     bool    `json:"unnamed,omitempty"`
-	XpSinceLastLevel            int     `json:"xpSinceLastLevel,omitempty"` // 当前经验
-	XpUntilNextLevel            int     `json:"xpUntilNextLevel,omitempty"` // 下一等级经验
-	IconImgSrc                  string  `json:"iconImgSrc,omitempty"`       // 头像URL
-	Region                      string  `json:"region,omitempty"`           // 服务器地区
+	XpSinceLastLevel            int     `json:"xpSinceLastLevel,omitempty"`
+	XpUntilNextLevel            int     `json:"xpUntilNextLevel,omitempty"`
+	IconImgSrc                  string  `json:"iconImgSrc,omitempty"`
+	Region                      string  `json:"region,omitempty"`
 }
 
 type IReroll struct {

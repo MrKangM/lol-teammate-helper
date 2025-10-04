@@ -41,7 +41,7 @@ func InitInstance(port int, token string, region string) {
 			MetaToken: token,
 			Region:    chineseRegion,
 		}
-		fmt.Printf("%s initialised config with port %d锛宼oken:%v\n", initLogPrefix, port, token)
+		fmt.Printf("%s initialised config with port %d (region %s)\n", initLogPrefix, port, chineseRegion)
 	})
 }
 
