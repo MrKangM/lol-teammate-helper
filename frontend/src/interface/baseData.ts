@@ -1,27 +1,28 @@
-export interface IplayerBaseData{
-    accountId?:string,
-    displayName?:string,
-    gameName?:string,
-    internalName?:string,
-    nameChangeFlag?:boolean,
-    percentCompleteForNextLevel?:number, //下一个等级百分比
-    privacy?:string,
-    profileIconId?:number, //头像ID
-    puuid?:string,
-    rerollPoints?:Ireroll,
-    summonerId?:number,
-    summonerLevel?:number, //召唤师等级
-    tagLine?:string,
-    unnamed?:boolean,
-    xpSinceLastLevel?:number, //当前经验
-    xpUntilNextLevel?:number, //下一等级经验
-    iconImgSrc?:string,       //头像URL
+export interface IPlayerBaseData {
+  accountId?: number
+  displayName?: string
+  gameName?: string
+  internalName?: string
+  nameChangeFlag?: boolean
+  percentCompleteForNextLevel?: number
+  privacy?: string
+  profileIconId?: number
+  puuid?: string
+  rerollPoints?: IReroll
+  summonerId?: number
+  summonerLevel?: number // Summoner level
+  tagLine?: string
+  unnamed?: boolean
+  xpSinceLastLevel?: number // Experience already earned for the current level
+  xpUntilNextLevel?: number // Remaining experience required for next level
+  iconImgSrc?: string // Profile icon URL
+  region?: string // Localised region label
 }
 
-interface Ireroll{
-    currentPoints:number,
-    maxRolls:number,
-    numberOfRolls:number,
-    pointsCostToRoll:number,
-    pointsToReroll:number,
+interface IReroll {
+  currentPoints: number
+  maxRolls: number
+  numberOfRolls: number
+  pointsCostToRoll: number
+  pointsToReroll: number
 }
