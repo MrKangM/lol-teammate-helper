@@ -23,11 +23,11 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { GetImgSrc, Greet } from "../wailsjs/go/main/App"
-import { IplayerBaseData } from "@/interface/baseData"
+import { IPlayerBaseData } from "@/interface/baseData"
 import { GetPlayerRankData } from "../wailsjs/go/controller/PlayerController"
 import type { IRankedStats } from "@/interface/rankData"
 
-const playerData = ref<IplayerBaseData | null>(null)
+const playerData = ref<IPlayerBaseData | null>(null)
 const rankData = ref<IRankedStats>()
 const activePanel = ref<"dashboard" | "helloWorld">("dashboard")
 const isLoading = ref(true)
@@ -39,9 +39,9 @@ const showClientPrompt = computed(() => isLoading.value || !hasPlayerData.value)
 
 const RETRY_DELAY_MS = 2000
 const overlayTitle = "请打开游戏客户端后再启动本软件"
-const overlaySubtitle = "正在尝试获取召唤师资料，请确认英雄联盟客户端已登录。"
+const overlaySubtitle = "正在尝试获取召唤师资料，请确认英雄联盟客户端已登录"
 const overlayRetryPrefix = "已尝试重新连接"
-const overlayRetrySuffix = "次，将继续自动重试…"
+const overlayRetrySuffix = "次，将继续自动重试"
 
 onMounted(() => {
   loadPlayerData()
@@ -66,10 +66,10 @@ async function waitForBackendBridge(maxAttempts = 50, delay = 100) {
   return true
 }
 
-const parsePlayerData = (raw: unknown): Partial<IplayerBaseData> => {
+const parsePlayerData = (raw: unknown): Partial<IPlayerBaseData> => {
   if (typeof raw === "string") {
     try {
-      return JSON.parse(raw) as Partial<IplayerBaseData>
+      return JSON.parse(raw) as Partial<IPlayerBaseData>
     } catch (error) {
       console.warn("failed to parse player data", error)
       return {}
@@ -77,7 +77,7 @@ const parsePlayerData = (raw: unknown): Partial<IplayerBaseData> => {
   }
 
   if (typeof raw === "object" && raw !== null) {
-    return raw as Partial<IplayerBaseData>
+    return raw as Partial<IPlayerBaseData>
   }
 
   return {}
@@ -105,25 +105,25 @@ async function loadPlayerData() {
       return
     }
 
-    let rawBaseData: unknown
+    let baseData: IPlayerBaseData
     try {
-      rawBaseData = await Greet("load-player")
+      baseData = await Greet("load-player")
     } catch (requestError) {
       console.error("failed to fetch summoner data", requestError)
       scheduleReload()
       return
     }
 
-    const parsedBaseData = parsePlayerData(rawBaseData)
-    const hasBaseData = Object.keys(parsedBaseData).length > 0
+    // const parsedBaseData = rawBaseData
+    // const hasBaseData = Object.keys(parsedBaseData).length > 0
 
-    if (!hasBaseData) {
-      console.warn("player data unavailable; waiting for League client")
-      scheduleReload()
-      return
-    }
+    // if (!hasBaseData) {
+    //   console.warn("player data unavailable; waiting for League client")
+    //   scheduleReload()
+    //   return
+    // }
 
-    const baseData = parsedBaseData as IplayerBaseData
+     // baseData = parsedBaseData as IplayerBaseData
     let iconImgSrc: string | undefined
     const profileIconId = typeof baseData.profileIconId === "number" ? baseData.profileIconId : undefined
 
@@ -142,23 +142,19 @@ async function loadPlayerData() {
       iconImgSrc,
     }
 
-    const rankIdentifier =
-      playerData.value.puuid ??
-      playerData.value.accountId ??
-      (playerData.value.summonerId != null ? String(playerData.value.summonerId) : undefined)
+    const puuid = playerData.value?.puuid ?? ""
 
-    if (rankIdentifier) {
+    if (puuid.length > 0) {
       try {
-        rankData.value = await GetPlayerRankData(rankIdentifier)
+        rankData.value = await GetPlayerRankData(puuid)
         console.log(`API获取的排位数据:${JSON.stringify(rankData)}`)
       } catch (rankError) {
         console.error("failed to fetch player rank data", rankError)
       }
     } else {
       rankData.value = undefined
-      console.warn("missing identifier for rank data")
+      console.warn("missing puuid for rank data")
     }
-
     if (retryTimer.value !== null) {
       clearTimeout(retryTimer.value)
       retryTimer.value = null
@@ -250,7 +246,7 @@ const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
         </header>
         <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
           <template v-if="activePanel === 'helloWorld'">
-            <HelloWorld />
+            <HelloWorld :player-data="playerData" :rank-data="rankData" />
           </template>
           <template v-else>
             <div class="grid auto-rows-min gap-4 md:grid-cols-3">
@@ -265,3 +261,9 @@ const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
     </SidebarProvider>
   </div>
 </template>
+
+
+
+
+
+
