@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"lol-teammate-helper/internal/connector"
 	"lol-teammate-helper/internal/utils"
 	"net/http"
 	"strings"
@@ -32,7 +31,8 @@ var (
 	once     sync.Once
 )
 
-func InitInstance(port int, token string, region string) {
+func InitInstance(port int, token string, region string) bool {
+	initialised := false
 	once.Do(func() {
 		authString := "riot:" + token
 		chineseRegion := utils.GetServerChineseName(region)
@@ -42,9 +42,10 @@ func InitInstance(port int, token string, region string) {
 			MetaToken: token,
 			Region:    chineseRegion,
 		}
-		go connector.Connection(instance.Port, instance.Token)
 		fmt.Printf("%s initialised config with port %d (region %s)\n", initLogPrefix, port, chineseRegion)
+		initialised = true
 	})
+	return initialised
 }
 
 func GetInstance() *AppConfig {

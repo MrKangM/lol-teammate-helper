@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"lol-teammate-helper/internal/config"
+	"lol-teammate-helper/internal/connector"
+	"lol-teammate-helper/internal/dispatch"
 	"lol-teammate-helper/internal/types"
 	"net/http"
 	"os/exec"
@@ -30,7 +32,11 @@ func NewApp() *App {
 	if err != nil {
 		fmt.Printf("[app.NewApp] failed to detect Riot credentials: %v\n", err)
 	} else {
-		config.InitInstance(port, token, region)
+		if config.InitInstance(port, token, region) {
+			if cfg, ok := config.Instance(); ok {
+				go connector.Connection(cfg.Port, cfg.Token)
+			}
+		}
 		fmt.Printf("[app.NewApp] detected Riot client on port %d (region %s)\n", port, region)
 	}
 
@@ -88,6 +94,16 @@ func (a *App) GetImgSrc(iconID int) string {
 
 	fmt.Printf("%s received %d bytes for icon %d\n", logPrefix, len(resp), icon)
 	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(resp)
+}
+
+// GetCurrentChampSelectSnapshot exposes the latest cached champion select snapshot to the frontend.
+func (a *App) GetCurrentChampSelectSnapshot() types.ChampSelectSnapshot {
+	snapshot, ok := dispatch.GetChampSelectSnapshot()
+	if !ok {
+		return types.ChampSelectSnapshot{}
+	}
+
+	return snapshot
 }
 
 func detectRiotCredentials() (int, string, string, error) {

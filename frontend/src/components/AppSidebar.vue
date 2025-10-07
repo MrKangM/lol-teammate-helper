@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from "vue"
 import type { SidebarProps } from "@/components/ui/sidebar"
 import type { IPlayerBaseData } from "@/interface/baseData"
@@ -83,13 +83,11 @@ const resolvePlayerName = (player?: IPlayerBaseData) => {
 const resolvePlayerRankLabel = (rankData?: IRankedStats): string | undefined => {
   const entry = rankData?.queueMap?.["RANKED_SOLO_5x5"]
   if (!entry) {
-    console.log(`数组不存在，${JSON.stringify(rankData?.queueMap)}`)
     return undefined
   }
 
   const tier = sanitize(entry.tier)
   const division = sanitize(entry.division)
-  console.log(`段位:${tier},阶级:${division}`)
   if (tier && division) {
     return `${tier} ${division}`
   }
@@ -142,13 +140,13 @@ const defaultSidebarData = {
       ],
     },
     {
-      title: "Models",
+      title: "Live Match",
       url: "#",
       icon: Bot,
       items: [
         {
-          title: "Genesis",
-          url: "#",
+          title: "Current BP",
+          url: "current-bp",
         },
         {
           title: "Explorer",
@@ -232,8 +230,7 @@ const resolvedUser = computed(() => {
   const name = resolvePlayerName(player) ?? fallback.name
 
   const rankLabel = resolvePlayerRankLabel(props.rankData)
-  console.log(`排位标签:${rankLabel}`)
-  const identifier = rankLabel ?? "未定级"
+  const identifier = rankLabel ?? "Unranked"
   const avatar = sanitize(player?.iconImgSrc) ?? props.avatarSrc ?? fallback.avatar
 
   return {

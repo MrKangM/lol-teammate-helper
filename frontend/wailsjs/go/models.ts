@@ -21,6 +21,113 @@ export namespace controller {
 
 export namespace types {
 	
+	export class RecentMatchSummary {
+	    championId: number;
+	    championName: string;
+	    championIcon: string;
+	    win: boolean;
+	    kills: number;
+	    deaths: number;
+	    assists: number;
+	    queueId: number;
+	    gameDuration: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RecentMatchSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.championId = source["championId"];
+	        this.championName = source["championName"];
+	        this.championIcon = source["championIcon"];
+	        this.win = source["win"];
+	        this.kills = source["kills"];
+	        this.deaths = source["deaths"];
+	        this.assists = source["assists"];
+	        this.queueId = source["queueId"];
+	        this.gameDuration = source["gameDuration"];
+	    }
+	}
+	export class TeamMemberSummary {
+	    puuid: string;
+	    gameName: string;
+	    tagLine: string;
+	    assignedPosition: string;
+	    championId: number;
+	    cellId: number;
+	    recentMatches: RecentMatchSummary[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TeamMemberSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.puuid = source["puuid"];
+	        this.gameName = source["gameName"];
+	        this.tagLine = source["tagLine"];
+	        this.assignedPosition = source["assignedPosition"];
+	        this.championId = source["championId"];
+	        this.cellId = source["cellId"];
+	        this.recentMatches = this.convertValues(source["recentMatches"], RecentMatchSummary);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ChampSelectSnapshot {
+	    queueId: number;
+	    gameId: number;
+	    // Go type: time
+	    updatedAt: any;
+	    team: TeamMemberSummary[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ChampSelectSnapshot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.queueId = source["queueId"];
+	        this.gameId = source["gameId"];
+	        this.updatedAt = this.convertValues(source["updatedAt"], null);
+	        this.team = this.convertValues(source["team"], TeamMemberSummary);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Stats {
 	    win: boolean;
 	    kills: number;
@@ -392,6 +499,8 @@ export namespace types {
 		    return a;
 		}
 	}
+	
+	
 	
 
 }
