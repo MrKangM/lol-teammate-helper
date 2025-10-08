@@ -7,6 +7,14 @@ This is the official Wails Vue-TS template.
 You can configure the project by editing `wails.json`. More information about the project settings can be found
 here: https://wails.io/docs/reference/project-config
 
+## Quick Start
+
+```azure
+lol-teammate-helper: cd frontend
+lol-teammate-helper/frontend: npm run dev
+lol-teammate-helper: wails dev
+```
+
 ## Live Development
 
 To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
