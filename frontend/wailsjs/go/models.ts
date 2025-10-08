@@ -1,24 +1,3 @@
-export namespace controller {
-	
-	export class HeroInfo {
-	    name: string;
-	    squarePortraitPath: string;
-	    iconDataURI?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new HeroInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.name = source["name"];
-	        this.squarePortraitPath = source["squarePortraitPath"];
-	        this.iconDataURI = source["iconDataURI"];
-	    }
-	}
-
-}
-
 export namespace types {
 	
 	export class RecentMatchSummary {
@@ -55,8 +34,11 @@ export namespace types {
 	    tagLine: string;
 	    assignedPosition: string;
 	    championId: number;
+	    championName: string;
+	    championIcon: string;
 	    cellId: number;
 	    recentMatches: RecentMatchSummary[];
+	    selectChampIcon: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new TeamMemberSummary(source);
@@ -69,8 +51,11 @@ export namespace types {
 	        this.tagLine = source["tagLine"];
 	        this.assignedPosition = source["assignedPosition"];
 	        this.championId = source["championId"];
+	        this.championName = source["championName"];
+	        this.championIcon = source["championIcon"];
 	        this.cellId = source["cellId"];
 	        this.recentMatches = this.convertValues(source["recentMatches"], RecentMatchSummary);
+	        this.selectChampIcon = source["selectChampIcon"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -215,6 +200,22 @@ export namespace types {
 		    }
 		    return a;
 		}
+	}
+	export class HeroInfo {
+	    name: string;
+	    squarePortraitPath: string;
+	    iconDataURI?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HeroInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.squarePortraitPath = source["squarePortraitPath"];
+	        this.iconDataURI = source["iconDataURI"];
+	    }
 	}
 	export class IReroll {
 	    currentPoints: number;
