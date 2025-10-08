@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"lol-teammate-helper/internal/connector"
 	"lol-teammate-helper/internal/utils"
 	"net/http"
 	"strings"
@@ -30,9 +29,21 @@ type AppConfig struct {
 var (
 	instance *AppConfig
 	once     sync.Once
+
+	riotTransport = &http.Transport{
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		MaxIdleConns:        32,
+		MaxIdleConnsPerHost: 8,
+		IdleConnTimeout:     90 * time.Second,
+	}
+	riotHTTPClient = &http.Client{
+		Timeout:   30 * time.Second,
+		Transport: riotTransport,
+	}
 )
 
-func InitInstance(port int, token string, region string) {
+func InitInstance(port int, token string, region string) bool {
+	initialised := false
 	once.Do(func() {
 		authString := "riot:" + token
 		chineseRegion := utils.GetServerChineseName(region)
@@ -42,9 +53,10 @@ func InitInstance(port int, token string, region string) {
 			MetaToken: token,
 			Region:    chineseRegion,
 		}
-		go connector.Connection(instance.Port, instance.Token)
 		fmt.Printf("%s initialised config with port %d (region %s)\n", initLogPrefix, port, chineseRegion)
+		initialised = true
 	})
+	return initialised
 }
 
 func GetInstance() *AppConfig {
@@ -93,14 +105,7 @@ func (ac *AppConfig) SendHttpRequest(endpoint string, method string) ([]byte, er
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "*/*")
 
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-
-	resp, err := client.Do(req)
+	resp, err := riotHTTPClient.Do(req)
 	if err != nil {
 		fmt.Printf("%s failed to send request: %v\n", requestLogPrefix, err)
 		return nil, fmt.Errorf("failed to send request: %w", err)

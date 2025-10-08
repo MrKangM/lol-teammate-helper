@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from "vue"
 import type { SidebarProps } from "@/components/ui/sidebar"
 import type { IPlayerBaseData } from "@/interface/baseData"
@@ -83,13 +83,11 @@ const resolvePlayerName = (player?: IPlayerBaseData) => {
 const resolvePlayerRankLabel = (rankData?: IRankedStats): string | undefined => {
   const entry = rankData?.queueMap?.["RANKED_SOLO_5x5"]
   if (!entry) {
-    console.log(`数组不存在，${JSON.stringify(rankData?.queueMap)}`)
     return undefined
   }
 
   const tier = sanitize(entry.tier)
   const division = sanitize(entry.division)
-  console.log(`段位:${tier},阶级:${division}`)
   if (tier && division) {
     return `${tier} ${division}`
   }
@@ -122,108 +120,92 @@ const defaultSidebarData = {
   ],
   navMain: [
     {
-      title: "Dashboard",
+      title: "数据面板",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
-          title: "History",
+          title: "生涯",
           url: "hello-world",
-        },
-        {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
         },
       ],
     },
     {
-      title: "Models",
+      title: "在线比赛",
       url: "#",
       icon: Bot,
       items: [
         {
-          title: "Genesis",
-          url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
+          title: "当前BP",
+          url: "current-bp",
         },
       ],
     },
-    {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
+    // {
+    //   title: "Documentation",
+    //   url: "#",
+    //   icon: BookOpen,
+    //   items: [
+    //     {
+    //       title: "Introduction",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Get Started",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Tutorials",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Changelog",
+    //       url: "#",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Settings",
+    //   url: "#",
+    //   icon: Settings2,
+    //   items: [
+    //     {
+    //       title: "General",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Team",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Billing",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Limits",
+    //       url: "#",
+    //     },
+    //   ],
+    // },
   ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
+  // projects: [
+  //   {
+  //     name: "Design Engineering",
+  //     url: "#",
+  //     icon: Frame,
+  //   },
+  //   {
+  //     name: "Sales & Marketing",
+  //     url: "#",
+  //     icon: PieChart,
+  //   },
+  //   {
+  //     name: "Travel",
+  //     url: "#",
+  //     icon: Map,
+  //   },
+  // ],
 }
 
 const resolvedUser = computed(() => {
@@ -232,8 +214,7 @@ const resolvedUser = computed(() => {
   const name = resolvePlayerName(player) ?? fallback.name
 
   const rankLabel = resolvePlayerRankLabel(props.rankData)
-  console.log(`排位标签:${rankLabel}`)
-  const identifier = rankLabel ?? "未定级"
+  const identifier = rankLabel ?? "Unranked"
   const avatar = sanitize(player?.iconImgSrc) ?? props.avatarSrc ?? fallback.avatar
 
   return {
@@ -257,7 +238,7 @@ const sidebarData = computed(() => ({
     </SidebarHeader>
     <SidebarContent>
       <NavMain :items="sidebarData.navMain" @navigate="handleNavNavigate" />
-      <NavProjects :projects="sidebarData.projects" />
+<!--      <NavProjects :projects="sidebarData.projects" />-->
     </SidebarContent>
     <SidebarFooter />
     <SidebarRail />

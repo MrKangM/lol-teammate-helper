@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
 export const description = "A sidebar that collapses to icons."
 export const iframeHeight = "800px"
 export const containerClass = "w-full h-full"
@@ -8,6 +8,7 @@ export const containerClass = "w-full h-full"
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import AppSidebar from "@/components/AppSidebar.vue"
 import HelloWorld from "@/components/HelloWorld.vue"
+import CurrentBp from "@/components/CurrentBp.vue"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -29,7 +30,7 @@ import type { IRankedStats } from "@/interface/rankData"
 
 const playerData = ref<IPlayerBaseData | null>(null)
 const rankData = ref<IRankedStats>()
-const activePanel = ref<"dashboard" | "helloWorld">("dashboard")
+const activePanel = ref<"dashboard" | "helloWorld" | "currentBp">("dashboard")
 const isLoading = ref(true)
 const retryTimer = ref<number | null>(null)
 const retryCount = ref(0)
@@ -184,6 +185,8 @@ type SidebarNavigatePayload = {
 const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
   if (payload.item.url === "hello-world") {
     activePanel.value = "helloWorld"
+  } else if (payload.item.url === "current-bp") {
+    activePanel.value = "currentBp"
   } else {
     activePanel.value = "dashboard"
   }
@@ -248,6 +251,9 @@ const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
           <template v-if="activePanel === 'helloWorld'">
             <HelloWorld :player-data="playerData" :rank-data="rankData" />
           </template>
+          <template v-else-if="activePanel === 'currentBp'">
+            <CurrentBp />
+          </template>
           <template v-else>
             <div class="grid auto-rows-min gap-4 md:grid-cols-3">
               <div class="aspect-video rounded-xl bg-muted/50" />
@@ -261,6 +267,14 @@ const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
     </SidebarProvider>
   </div>
 </template>
+
+
+
+
+
+
+
+
 
 
 
