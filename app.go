@@ -44,6 +44,7 @@ func NewApp() *App {
 }
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	dispatch.SetRuntimeContext(ctx)
 }
 
 func (a *App) Greet(name string) types.IPlayerBaseData {

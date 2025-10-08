@@ -1,18 +1,39 @@
 package dispatch
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
-	"lol-teammate-helper/internal/controller"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
 	"lol-teammate-helper/internal/service"
 	"lol-teammate-helper/internal/types"
-	"sync"
 )
 
 const maxRecentMatches = 5
+
+var (
+	runtimeCtx      context.Context
+	runtimeCtxMu    sync.RWMutex
+	matchHistorySvc = service.NewMatchHistoryService()
+)
+
+// SetRuntimeContext allows the Wails runtime context to be reused when emitting events.
+func SetRuntimeContext(ctx context.Context) {
+	runtimeCtxMu.Lock()
+	defer runtimeCtxMu.Unlock()
+	runtimeCtx = ctx
+}
+
+func getRuntimeContext() context.Context {
+	runtimeCtxMu.RLock()
+	defer runtimeCtxMu.RUnlock()
+	return runtimeCtx
+}
 
 // EventHandler routes websocket events based on their URL.
 func EventHandler(url string, data json.RawMessage) {
@@ -52,6 +73,7 @@ func handleChampSelectEvent(data json.RawMessage) {
 			mu.Lock()
 			summaries = append(summaries, summary)
 			mu.Unlock()
+
 		}(playerCopy)
 	}
 
@@ -66,6 +88,12 @@ func handleChampSelectEvent(data json.RawMessage) {
 		GameID:    champSelect.GameID,
 		UpdatedAt: time.Now(),
 		Team:      summaries,
+	}
+
+	if ctx := getRuntimeContext(); ctx != nil {
+		runtime.EventsEmit(ctx, "champ-select:snapshot", snapshot)
+	} else {
+		fmt.Println("[dispatch.handleChampSelectEvent] runtime context is not set; skipping emit")
 	}
 
 	StoreChampSelectSnapshot(snapshot)
@@ -92,11 +120,26 @@ func buildTeamMemberSummary(player types.Player) types.TeamMemberSummary {
 	}
 
 	summary.RecentMatches = buildRecentMatches(matchData.History, matchData.Heroes)
+	if player.ChampionID > 0 && matchHistorySvc != nil {
+		heroInfo, heroErr := matchHistorySvc.GetMatchHistoryNameAndIconByHeroId(player.ChampionID)
+		if heroErr != nil {
+			fmt.Printf("%s failed to fetch current hero %d: %v\n", "[dispatch.buildTeamMemberSummary]", player.ChampionID, heroErr)
+		} else {
+			summary.ChampionName = heroInfo.Name
+			icon := heroInfo.IconDataURI
+			if icon == "" {
+				icon = heroInfo.SquarePortraitPath
+			}
+			summary.ChampionIcon = icon
+		}
+	}
+	if summary.ChampionName == "" && player.ChampionID > 0 {
+		summary.ChampionName = fmt.Sprintf("Champion %d", player.ChampionID)
+	}
 
 	return summary
 }
-
-func buildRecentMatches(history types.MatchHistory, heroMap map[int]controller.HeroInfo) []types.RecentMatchSummary {
+func buildRecentMatches(history types.MatchHistory, heroMap map[int]types.HeroInfo) []types.RecentMatchSummary {
 	games := history.Games.Games
 	if len(games) == 0 {
 		return nil

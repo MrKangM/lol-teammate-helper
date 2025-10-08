@@ -22,8 +22,11 @@ type TeamMemberSummary struct {
 	TagLine          string               `json:"tagLine"`
 	AssignedPosition string               `json:"assignedPosition"`
 	ChampionID       int                  `json:"championId"`
+	ChampionName     string               `json:"championName"`
+	ChampionIcon     string               `json:"championIcon"`
 	CellID           int                  `json:"cellId"`
 	RecentMatches    []RecentMatchSummary `json:"recentMatches"`
+	SelectChampIcon  string               `json:"selectChampIcon"`
 }
 
 // ChampSelectSnapshot stores the latest champion select data for reuse in the UI.

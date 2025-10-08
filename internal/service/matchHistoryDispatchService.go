@@ -3,31 +3,27 @@ package service
 import (
 	"fmt"
 
-	"lol-teammate-helper/internal/controller"
 	"lol-teammate-helper/internal/types"
 )
 
-// TeammateMatchData bundles a teammate\'s recent match history with the hero metadata
-// required by the UI.
+// TeammateMatchData bundles a teammate's recent match history with champion metadata.
 type TeammateMatchData struct {
 	History types.MatchHistory
-	Heroes  map[int]controller.HeroInfo
+	Heroes  map[int]types.HeroInfo
 }
 
-// GetTeammateMatchDetails fetches the teammate\'s ranked match history along with the
-// hero metadata needed to render champion icons.
+// GetTeammateMatchDetails fetches a teammate's ranked match history plus champion info.
 func GetTeammateMatchDetails(puuid string) (TeammateMatchData, error) {
 	var result TeammateMatchData
 
-	mhController := controller.NewMatchHistory()
-	matchHistory, err := mhController.GetPlayerRankMatches(puuid)
+	svc := NewMatchHistoryService()
+
+	matchHistory, err := svc.GetPlayerRankMatches(puuid)
 	if err != nil {
 		return result, err
 	}
 
-	fmt.Printf("GetTeammateMatchHistory杩斿洖鐨勭帺瀹舵暟鎹細%+v\n", matchHistory)
-	fmt.Println("GetTeammateMatchHistory鑾峰彇鐨刾uuid" + puuid)
-
+	fmt.Printf("[service.GetTeammateMatchDetails] received match history for %s with %d games\n", puuid, len(matchHistory.Games.Games))
 	result.History = matchHistory
 
 	championIDs := collectChampionIDs(matchHistory)
@@ -35,7 +31,7 @@ func GetTeammateMatchDetails(puuid string) (TeammateMatchData, error) {
 		return result, nil
 	}
 
-	heroes, err := mhController.GetMatchHistoryHeroesByIds(championIDs)
+	heroes, err := svc.GetMatchHistoryHeroesByIds(championIDs)
 	if err != nil {
 		fmt.Printf("[service.GetTeammateMatchDetails] failed to fetch hero info: %v\n", err)
 		return result, nil
