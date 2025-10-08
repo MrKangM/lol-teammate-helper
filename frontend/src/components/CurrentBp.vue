@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -8,6 +8,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EventsOn } from "../../wailsjs/runtime"
 import { types } from "../../wailsjs/go/models"
 import ChampSelectSnapshot = types.ChampSelectSnapshot;
+const SNAPSHOT_CACHE_KEY = "current-bp:champ-select-snapshot"
+
+const readSnapshotFromCache = (): ChampSelectSnapshot | null => {
+  if (typeof localStorage === "undefined") {
+    return null
+  }
+  const raw = localStorage.getItem(SNAPSHOT_CACHE_KEY)
+  if (!raw) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(raw)
+    return ChampSelectSnapshot.createFrom(parsed)
+  } catch (error) {
+    console.warn("[CurrentBp] failed to read cached snapshot", error)
+    localStorage.removeItem(SNAPSHOT_CACHE_KEY)
+    return null
+  }
+}
+
+const writeSnapshotToCache = (snapshot: ChampSelectSnapshot) => {
+  if (typeof localStorage === "undefined") {
+    return
+  }
+  try {
+    localStorage.setItem(SNAPSHOT_CACHE_KEY, JSON.stringify(snapshot))
+  } catch (error) {
+    console.warn("[CurrentBp] failed to persist snapshot", error)
+  }
+}
 
 type MockMatch = {
   championName: string
@@ -298,11 +328,21 @@ const getSelectedChampionIcon = (icon?: string) => icon || EMPTY_ICON
 
 let stopListening: (() => void) | null = null
 
+const applySnapshot = (snapshot: ChampSelectSnapshot) => {
+  liveSnapshot.value = snapshot
+  writeSnapshotToCache(snapshot)
+}
+
 onMounted(() => {
+  const cachedSnapshot = readSnapshotFromCache()
+  if (cachedSnapshot) {
+    applySnapshot(cachedSnapshot)
+  }
+
   stopListening = EventsOn("champ-select:snapshot", (payload: ChampSelectSnapshot | any) => {
     const snapshot = ChampSelectSnapshot.createFrom(payload)
     console.log("[CurrentBp] 收到选人事件", snapshot)
-    liveSnapshot.value = snapshot
+    applySnapshot(snapshot)
   })
 })
 
