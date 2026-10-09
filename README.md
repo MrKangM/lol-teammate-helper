@@ -45,6 +45,13 @@ wails dev                                     # 开发模式（热更新，终�
 $env:LTH_LOG_LEVEL = "debug"; wails dev
 ```
 
+### 客户端检测不到
+
+日志出现 `league client not detected` 时，后面的 `err=` 就是原因：
+
+- `league client is not running`：没找到 `LeagueClientUx.exe` 进程。
+- `league client found but its command line is unreadable`：客户端以管理员权限运行，普通权限读不到它的启动参数。**用管理员身份打开终端再运行 `wails dev`**，或者设置环境变量 `LTH_LOL_DIR` 指向包含客户端 `lockfile` 文件的目录（通常是客户端安装目录下的 `LeagueClient` 文件夹），程序会改读 lockfile。
+
 排查时关注这几类日志：`connected to league client`（已连上客户端）、`gameflow phase`（游戏阶段）、`snapshot published`（已向界面推送数据）、以及 `failed` / `Warn` 级别的报错。
 
 测试（后端纯逻辑部分）：

@@ -32,3 +32,32 @@ func TestParseCommandLineRegionOptional(t *testing.T) {
 		t.Fatalf("got %+v, err %v", got, err)
 	}
 }
+
+func TestParseLockfile(t *testing.T) {
+	got, err := ParseLockfile("LeagueClient:1234:54321:secret-pw:https\n")
+	if err != nil || got.Port != 54321 || got.Token != "secret-pw" {
+		t.Fatalf("got %+v, err %v", got, err)
+	}
+	for _, bad := range []string{"", "a:b:c", "LeagueClient:1:notaport:pw:https", "LeagueClient:1:2::https"} {
+		if _, err := ParseLockfile(bad); err == nil {
+			t.Errorf("%q should fail", bad)
+		}
+	}
+}
+
+func TestParsePowerShellOutput(t *testing.T) {
+	info, err := parsePowerShellOutput("CMD=\"x\" --app-port=1\r\nEXE=C:\\Riot Games\\LoL\\LeagueClientUx.exe\r\n")
+	if err != nil || info.CommandLine == "" || info.InstallDir == "" {
+		t.Fatalf("got %+v, err %v", info, err)
+	}
+	if _, err := parsePowerShellOutput("NOPROC\r\n"); err != ErrNotRunning {
+		t.Errorf("NOPROC: got %v", err)
+	}
+	// process visible but command line hidden: the elevated-client case
+	if _, err := parsePowerShellOutput("CMD=\r\nEXE=\r\n"); err != ErrAccessDenied {
+		t.Errorf("empty command line: got %v", err)
+	}
+	if _, err := parsePowerShellOutput(""); err != ErrNotRunning {
+		t.Errorf("empty output: got %v", err)
+	}
+}

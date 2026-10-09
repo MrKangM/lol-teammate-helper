@@ -40,11 +40,17 @@ const (
 // picks a new port and token each time it starts.
 func Run(ctx context.Context) {
 	backoff := minBackoff
+	var lastDetectErr string
 	for ctx.Err() == nil {
 		creds, err := lcu.Detect()
 		if err != nil {
-			slog.Debug("league client not detected", "err", err)
+			// Log each distinct reason once; polling every few seconds must not flood the log.
+			if msg := err.Error(); msg != lastDetectErr {
+				slog.Warn("league client not detected", "err", err)
+				lastDetectErr = msg
+			}
 		} else {
+			lastDetectErr = ""
 			if config.Update(creds.Port, creds.Token, creds.Region) {
 				service.Shared().ResetCaches()
 			}
