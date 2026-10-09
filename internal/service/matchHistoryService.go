@@ -43,17 +43,22 @@ type MatchHistoryService struct {
 	// Item metadata for the end-of-game screen.
 	itemPaths map[int]string
 	itemIcons map[int]string
+	// Generic client assets keyed by their candidate path list.
+	assetURIs   map[string]string
+	assetMisses map[string]time.Time
 }
 
 // NewMatchHistoryService constructs a service with empty caches.
 func NewMatchHistoryService() *MatchHistoryService {
 	return &MatchHistoryService{
-		heroCache:  make(map[int]types.HeroInfo),
-		matchCache: make(map[string]matchCacheEntry),
-		bodyCache:  make(map[string]bodyCacheEntry),
-		gamesCache: make(map[string]gamesCacheEntry),
-		itemIcons:  make(map[int]string),
-		now:        time.Now,
+		heroCache:   make(map[int]types.HeroInfo),
+		matchCache:  make(map[string]matchCacheEntry),
+		bodyCache:   make(map[string]bodyCacheEntry),
+		gamesCache:  make(map[string]gamesCacheEntry),
+		itemIcons:   make(map[int]string),
+		assetURIs:   make(map[string]string),
+		assetMisses: make(map[string]time.Time),
+		now:         time.Now,
 	}
 }
 
@@ -78,6 +83,8 @@ func (svc *MatchHistoryService) ResetCaches() {
 	svc.gamesCache = make(map[string]gamesCacheEntry)
 	svc.itemPaths = nil
 	svc.itemIcons = make(map[int]string)
+	svc.assetURIs = make(map[string]string)
+	svc.assetMisses = make(map[string]time.Time)
 }
 
 // GetPlayerRankMatches returns the ranked match history for the provided PUUID.

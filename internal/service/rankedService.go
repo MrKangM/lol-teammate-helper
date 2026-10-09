@@ -196,12 +196,12 @@ func (svc *MatchHistoryService) GetGameDetail(gameID int64, highlightPuuid strin
 	}
 	icons := svc.GetItemIcons(itemIDs)
 
-	return BuildGameDetail(game, highlightPuuid, heroes, icons, SpellName), nil
+	return BuildGameDetail(game, highlightPuuid, heroes, icons, svc.GetSpell), nil
 }
 
 // BuildGameDetail assembles the scoreboard DTO from raw game data; it has no
 // side effects so it can be unit tested.
-func BuildGameDetail(game types.Game, highlightPuuid string, heroes map[int]types.HeroInfo, itemIcons map[int]string, spellName func(int) string) types.GameDetail {
+func BuildGameDetail(game types.Game, highlightPuuid string, heroes map[int]types.HeroInfo, itemIcons map[int]string, spell func(int) types.SpellInfo) types.GameDetail {
 	identities := make(map[int]types.IdentityPlayer, len(game.ParticipantIdentities))
 	for _, id := range game.ParticipantIdentities {
 		identities[id.ParticipantID] = id.Player
@@ -268,7 +268,7 @@ func BuildGameDetail(game types.Game, highlightPuuid string, heroes map[int]type
 			Damage:       st.TotalDamageDealtToChampions,
 			DamageTaken:  st.TotalDamageTaken,
 			VisionScore:  st.VisionScore,
-			Spells:       []string{spellName(p.Spell1ID), spellName(p.Spell2ID)},
+			Spells:       []types.SpellInfo{spell(p.Spell1ID), spell(p.Spell2ID)},
 			Items:        items,
 			IsTarget:     highlightPuuid != "" && who.Puuid == highlightPuuid,
 		})

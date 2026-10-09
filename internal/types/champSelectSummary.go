@@ -22,6 +22,24 @@ type RecentMatchSummary struct {
 	GameDuration int    `json:"gameDuration"`
 }
 
+// SpellInfo is a summoner spell with the client's own name and icon.
+type SpellInfo struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Icon string `json:"icon"` // data URI; empty when unavailable
+}
+
+// ChampionStat is a player's record on one champion over the analysed games.
+type ChampionStat struct {
+	ChampionID   int     `json:"championId"`
+	ChampionName string  `json:"championName"`
+	ChampionIcon string  `json:"championIcon"`
+	Games        int     `json:"games"`
+	Wins         int     `json:"wins"`
+	WinRate      float64 `json:"winRate"`
+	KDA          float64 `json:"kda"`
+}
+
 // RankSummary is one ranked queue entry of a player.
 type RankSummary struct {
 	QueueType    string  `json:"queueType"`
@@ -72,16 +90,17 @@ type TeamMemberSummary struct {
 	ChampionIcon     string `json:"championIcon"`
 	CellID           int    `json:"cellId"`
 
-	SummonerLevel int      `json:"summonerLevel"`
-	Spells        []string `json:"spells"`
-	MasteryLevel  int      `json:"masteryLevel"`
-	MasteryPoints int      `json:"masteryPoints"`
+	SummonerLevel int         `json:"summonerLevel"`
+	Spells        []SpellInfo `json:"spells"`
+	MasteryLevel  int         `json:"masteryLevel"`
+	MasteryPoints int         `json:"masteryPoints"`
 
 	Solo          RankSummary          `json:"solo"`
 	Flex          RankSummary          `json:"flex"`
 	Stats         PlayerStats          `json:"stats"`
 	Rating        Rating               `json:"rating"`
 	Tags          []string             `json:"tags"`
+	Pool          []ChampionStat       `json:"pool"`
 	RecentMatches []RecentMatchSummary `json:"recentMatches"`
 }
 

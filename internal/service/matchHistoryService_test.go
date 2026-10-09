@@ -47,7 +47,8 @@ func TestBuildGameDetail(t *testing.T) {
 		Teams: []types.GameTeam{{TeamID: 100, Win: "Win"}, {TeamID: 200, Win: "Fail"}},
 	}
 	heroes := map[int]types.HeroInfo{1: {Name: "Annie", IconDataURI: "data:a"}, 2: {Name: "Olaf", SquarePortraitPath: "p"}}
-	d := BuildGameDetail(game, "me", heroes, map[int]string{3000: "data:item"}, SpellName)
+	spell := func(id int) types.SpellInfo { return types.SpellInfo{ID: id, Name: SpellName(id)} }
+	d := BuildGameDetail(game, "me", heroes, map[int]string{3000: "data:item"}, spell)
 
 	if len(d.Teams) != 2 || !d.Teams[0].Win || d.Teams[1].Win {
 		t.Fatalf("teams = %+v", d.Teams)
@@ -60,7 +61,7 @@ func TestBuildGameDetail(t *testing.T) {
 	if me.Name != "Me #123" || !me.IsTarget || me.ChampionIcon != "data:a" || me.CS != 60 || me.Items[0] != "data:item" || len(me.Items) != 7 {
 		t.Errorf("me = %+v", me)
 	}
-	if me.Spells[0] != "闪现" || me.Spells[1] != "引燃" {
+	if me.Spells[0].Name != "闪现" || me.Spells[1].Name != "引燃" {
 		t.Errorf("spells = %v", me.Spells)
 	}
 	ally := blue.Players[1]

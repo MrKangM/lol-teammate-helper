@@ -65,7 +65,7 @@ func buildMember(in memberInput) types.TeamMemberSummary {
 	m := types.TeamMemberSummary{
 		Puuid: in.Puuid, GameName: in.GameName, TagLine: in.TagLine,
 		AssignedPosition: in.Position, ChampionID: in.ChampionID, CellID: in.CellID,
-		Spells: []string{service.SpellName(in.Spells[0]), service.SpellName(in.Spells[1])},
+		Spells: []types.SpellInfo{svc.GetSpell(in.Spells[0]), svc.GetSpell(in.Spells[1])},
 		Tags:   []string{},
 	}
 	if in.Puuid == "" {
@@ -129,10 +129,33 @@ func buildMember(in memberInput) types.TeamMemberSummary {
 	}
 
 	m.RecentMatches = buildRecentMatches(games, heroes)
+	m.Pool = ChampionPoolWithIcons(games, heroes, poolSize)
 	m.Stats = analysis.ComputeStats(games, in.ChampionID, in.Position)
 	m.Rating = analysis.Rate(m)
 	m.Tags = analysis.Tags(m)
 	return m
+}
+
+const poolSize = 5
+
+// ChampionPoolWithIcons builds the most played champions with names and icons.
+func ChampionPoolWithIcons(games []types.Game, heroes map[int]types.HeroInfo, top int) []types.ChampionStat {
+	pool := analysis.ChampionPool(games, top)
+	for i := range pool {
+		hero := heroes[pool[i].ChampionID]
+		pool[i].ChampionName = hero.Name
+		pool[i].ChampionIcon = iconOf(hero)
+	}
+	return pool
+}
+
+// BuildSelf analyses the logged-in summoner's own recent ranked games.
+func BuildSelf() (types.TeamMemberSummary, bool) {
+	puuid := matchHistorySvc.GetCurrentPuuid()
+	if puuid == "" {
+		return types.TeamMemberSummary{}, false
+	}
+	return buildMember(memberInput{Puuid: puuid}), true
 }
 
 func iconOf(h types.HeroInfo) string {

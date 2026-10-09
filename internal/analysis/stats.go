@@ -3,6 +3,7 @@
 package analysis
 
 import (
+	"sort"
 	"strings"
 
 	"lol-teammate-helper/internal/types"
@@ -120,4 +121,59 @@ func maxf(a, b float64) float64 {
 		return a
 	}
 	return b
+}
+
+// ChampionPool ranks the champions a player used in games (newest first,
+// player as Participants[0]) by games played, then win rate. At most top
+// entries are returned; names and icons are left for the caller to fill in.
+func ChampionPool(games []types.Game, top int) []types.ChampionStat {
+	type acc struct {
+		games, wins, kills, deaths, assists int
+		firstSeen                           int
+	}
+	byChamp := map[int]*acc{}
+	order := 0
+	for _, g := range games {
+		if len(g.Participants) == 0 {
+			continue
+		}
+		p := g.Participants[0]
+		a, ok := byChamp[p.ChampionID]
+		if !ok {
+			a = &acc{firstSeen: order}
+			byChamp[p.ChampionID] = a
+			order++
+		}
+		a.games++
+		if p.Stats.Win {
+			a.wins++
+		}
+		a.kills += p.Stats.Kills
+		a.deaths += p.Stats.Deaths
+		a.assists += p.Stats.Assists
+	}
+
+	pool := make([]types.ChampionStat, 0, len(byChamp))
+	for id, a := range byChamp {
+		pool = append(pool, types.ChampionStat{
+			ChampionID: id,
+			Games:      a.games,
+			Wins:       a.wins,
+			WinRate:    pct(a.wins, a.games),
+			KDA:        float64(a.kills+a.assists) / maxf(float64(a.deaths), 1),
+		})
+	}
+	sort.SliceStable(pool, func(i, j int) bool {
+		if pool[i].Games != pool[j].Games {
+			return pool[i].Games > pool[j].Games
+		}
+		if pool[i].WinRate != pool[j].WinRate {
+			return pool[i].WinRate > pool[j].WinRate
+		}
+		return byChamp[pool[i].ChampionID].firstSeen < byChamp[pool[j].ChampionID].firstSeen
+	})
+	if top > 0 && len(pool) > top {
+		pool = pool[:top]
+	}
+	return pool
 }

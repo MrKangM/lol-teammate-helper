@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"lol-teammate-helper/internal/diag"
 )
 
 const (
@@ -52,6 +54,7 @@ func Setup() (path string, closeFn func()) {
 	}
 
 	slog.SetDefault(slog.New(slog.NewTextHandler(out, &slog.HandlerOptions{Level: level})))
+	diag.SetLogPath(path)
 	slog.Info("logging started", "file", path, "level", level.String())
 	return path, closeFn
 }

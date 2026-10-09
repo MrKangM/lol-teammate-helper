@@ -100,11 +100,13 @@ func (ac *AppConfig) SendHttpRequest(endpoint string, method string) ([]byte, er
 
 	resp, err := riotHTTPClient.Do(req)
 	if err != nil {
+		slog.Warn("lcu request failed", "method", method, "endpoint", endpoint, "err", err)
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		slog.Warn("lcu request rejected", "method", method, "endpoint", endpoint, "status", resp.Status)
 		return nil, fmt.Errorf("http request %s failed with status: %s", endpoint, resp.Status)
 	}
 

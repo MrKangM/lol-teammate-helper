@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"lol-teammate-helper/internal/config"
+	"lol-teammate-helper/internal/diag"
 	"lol-teammate-helper/internal/dispatch"
 	"lol-teammate-helper/internal/lcu"
 	"lol-teammate-helper/internal/service"
@@ -49,6 +50,7 @@ func Run(ctx context.Context) {
 				slog.Warn("league client not detected", "err", err)
 				lastDetectErr = msg
 			}
+			diag.SetDisconnected(err.Error())
 		} else {
 			lastDetectErr = ""
 			if config.Update(creds.Port, creds.Token, creds.Region) {
@@ -57,6 +59,7 @@ func Run(ctx context.Context) {
 			start := time.Now()
 			if err := session(ctx, creds.Port); err != nil {
 				slog.Warn("websocket session ended", "err", err)
+				diag.SetDisconnected(err.Error())
 			}
 			if time.Since(start) > 30*time.Second {
 				backoff = minBackoff // it was a healthy connection; retry promptly
@@ -105,6 +108,7 @@ func session(ctx context.Context, port int) error {
 		}
 	}
 	slog.Info("connected to league client", "port", port)
+	diag.SetConnected(port, cfg.Region)
 
 	// A single worker handles events in order. While it is busy only the latest
 	// event per resource is kept, since each update supersedes the previous one.
@@ -156,6 +160,7 @@ const maxLoggedPayload = 20000
 // logEvent records the raw event at debug level (LTH_LOG_LEVEL=debug) so the
 // exact fields the client sends can be inspected when something looks wrong.
 func logEvent(msg types.WSMessageType) {
+	diag.RecordEvent(msg.Uri, msg.EventType, msg.Data)
 	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}

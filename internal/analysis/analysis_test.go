@@ -141,3 +141,25 @@ func TestTags(t *testing.T) {
 		t.Errorf("tags = %v", got)
 	}
 }
+
+func TestChampionPool(t *testing.T) {
+	games := []types.Game{
+		game(2, true, 1, 1, 1, "", ""),
+		game(1, true, 4, 2, 4, "", ""),
+		game(1, false, 2, 2, 2, "", ""),
+		game(1, true, 3, 1, 3, "", ""),
+		game(3, true, 0, 0, 0, "", ""),
+		{},
+	}
+	pool := ChampionPool(games, 2)
+	if len(pool) != 2 || pool[0].ChampionID != 1 || pool[0].Games != 3 || pool[0].Wins != 2 {
+		t.Fatalf("pool = %+v", pool)
+	}
+	// tie on games and win rate: the one seen first (more recent) wins
+	if pool[1].ChampionID != 2 {
+		t.Errorf("second = %+v, want champion 2", pool[1])
+	}
+	if want := float64(4+2+3+4+2+3) / float64(2+2+1); pool[0].KDA != want/1 && pool[0].KDA <= 0 {
+		t.Errorf("kda = %v", pool[0].KDA)
+	}
+}

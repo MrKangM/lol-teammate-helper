@@ -2,23 +2,23 @@ package types
 
 // GameDetailPlayer is one row of the end-of-game scoreboard.
 type GameDetailPlayer struct {
-	Puuid        string   `json:"puuid"`
-	Name         string   `json:"name"`
-	ChampionID   int      `json:"championId"`
-	ChampionName string   `json:"championName"`
-	ChampionIcon string   `json:"championIcon"`
-	Level        int      `json:"level"`
-	Kills        int      `json:"kills"`
-	Deaths       int      `json:"deaths"`
-	Assists      int      `json:"assists"`
-	CS           int      `json:"cs"`
-	Gold         int      `json:"gold"`
-	Damage       int      `json:"damage"`
-	DamageTaken  int      `json:"damageTaken"`
-	VisionScore  int      `json:"visionScore"`
-	Spells       []string `json:"spells"`
-	Items        []string `json:"items"` // data URIs; empty string for an empty slot
-	IsTarget     bool     `json:"isTarget"`
+	Puuid        string      `json:"puuid"`
+	Name         string      `json:"name"`
+	ChampionID   int         `json:"championId"`
+	ChampionName string      `json:"championName"`
+	ChampionIcon string      `json:"championIcon"`
+	Level        int         `json:"level"`
+	Kills        int         `json:"kills"`
+	Deaths       int         `json:"deaths"`
+	Assists      int         `json:"assists"`
+	CS           int         `json:"cs"`
+	Gold         int         `json:"gold"`
+	Damage       int         `json:"damage"`
+	DamageTaken  int         `json:"damageTaken"`
+	VisionScore  int         `json:"visionScore"`
+	Spells       []SpellInfo `json:"spells"`
+	Items        []string    `json:"items"` // data URIs; empty string for an empty slot
+	IsTarget     bool        `json:"isTarget"`
 }
 
 // GameDetailTeam is one side of the scoreboard.

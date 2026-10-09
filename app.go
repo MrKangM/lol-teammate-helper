@@ -7,10 +7,15 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os/exec"
+	"runtime"
 
 	"lol-teammate-helper/internal/config"
 	"lol-teammate-helper/internal/connector"
+	"lol-teammate-helper/internal/diag"
 	"lol-teammate-helper/internal/dispatch"
+	"lol-teammate-helper/internal/logging"
+	"lol-teammate-helper/internal/service"
 	"lol-teammate-helper/internal/types"
 )
 
@@ -87,4 +92,49 @@ func (a *App) GetCurrentChampSelectSnapshot() types.ChampSelectSnapshot {
 
 func profileIconURL(id int) string {
 	return fmt.Sprintf(profileIconPathTemplate, id)
+}
+
+// GetMyCareer analyses the logged-in summoner's own recent ranked games.
+func (a *App) GetMyCareer() types.TeamMemberSummary {
+	me, ok := dispatch.BuildSelf()
+	if !ok {
+		return types.TeamMemberSummary{}
+	}
+	return me
+}
+
+// GetRankEmblem returns the client's own emblem image for a tier ("" if unavailable).
+func (a *App) GetRankEmblem(tierKey string) string {
+	return service.Shared().GetAsset(service.RankEmblemCandidates(tierKey))
+}
+
+// GetPositionIcon returns the client's own lane icon ("" if unavailable).
+func (a *App) GetPositionIcon(position string) string {
+	if position == "" {
+		return ""
+	}
+	return service.Shared().GetAsset(service.PositionIconCandidates(position))
+}
+
+// GetDiagnostics returns connection state and the most recent raw events.
+func (a *App) GetDiagnostics() diag.Snapshot {
+	return diag.Get()
+}
+
+// OpenLogDir opens the folder containing the log file in the file manager.
+func (a *App) OpenLogDir() {
+	dir := logging.Dir()
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", dir)
+	case "darwin":
+		cmd = exec.Command("open", dir)
+	default:
+		cmd = exec.Command("xdg-open", dir)
+	}
+	// explorer reports a non-zero exit code even on success, so only start it.
+	if err := cmd.Start(); err != nil {
+		slog.Warn("open log dir failed", "dir", dir, "err", err)
+	}
 }

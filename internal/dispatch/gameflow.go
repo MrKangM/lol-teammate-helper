@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 
+	"lol-teammate-helper/internal/diag"
 	"lol-teammate-helper/internal/types"
 )
 
@@ -17,6 +18,7 @@ func handleGameflowEvent(data json.RawMessage) {
 		return
 	}
 
+	diag.SetPhase(session.Phase)
 	slog.Info("gameflow phase", "phase", session.Phase,
 		"teamOne", len(session.GameData.TeamOne), "teamTwo", len(session.GameData.TeamTwo))
 
