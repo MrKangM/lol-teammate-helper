@@ -2,3 +2,5 @@ build/bin
 node_modules
 frontend/dist
 AGENTS.md
+frontend/package.json.md5
+frontend/components.d.ts

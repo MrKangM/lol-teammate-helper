@@ -327,6 +327,7 @@ const getChampionIcon = (icon?: string) => icon || DEFAULT_ICON
 const getSelectedChampionIcon = (icon?: string) => icon || EMPTY_ICON
 
 let stopListening: (() => void) | null = null
+let stopListeningEnded: (() => void) | null = null
 
 const applySnapshot = (snapshot: ChampSelectSnapshot) => {
   liveSnapshot.value = snapshot
@@ -341,13 +342,23 @@ onMounted(() => {
 
   stopListening = EventsOn("champ-select:snapshot", (payload: ChampSelectSnapshot | any) => {
     const snapshot = ChampSelectSnapshot.createFrom(payload)
-    console.log("[CurrentBp] 收到选人事件", snapshot)
     applySnapshot(snapshot)
+  })
+
+  // The backend signals the end of champion select so stale teammates are not shown.
+  stopListeningEnded = EventsOn("champ-select:ended", () => {
+    liveSnapshot.value = null
+    try {
+      localStorage.removeItem(SNAPSHOT_CACHE_KEY)
+    } catch (error) {
+      console.warn("[CurrentBp] failed to clear cached snapshot", error)
+    }
   })
 })
 
 onUnmounted(() => {
   stopListening?.()
+  stopListeningEnded?.()
 })
 </script>
 

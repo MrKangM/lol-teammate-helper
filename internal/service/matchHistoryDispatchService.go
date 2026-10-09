@@ -1,7 +1,7 @@
 package service
 
 import (
-	"fmt"
+	"log/slog"
 
 	"lol-teammate-helper/internal/types"
 )
@@ -16,14 +16,13 @@ type TeammateMatchData struct {
 func GetTeammateMatchDetails(puuid string) (TeammateMatchData, error) {
 	var result TeammateMatchData
 
-	svc := NewMatchHistoryService()
+	svc := Shared()
 
 	matchHistory, err := svc.GetPlayerRankMatches(puuid)
 	if err != nil {
 		return result, err
 	}
 
-	fmt.Printf("[service.GetTeammateMatchDetails] received match history for %s with %d games\n", puuid, len(matchHistory.Games.Games))
 	result.History = matchHistory
 
 	championIDs := collectChampionIDs(matchHistory)
@@ -33,7 +32,7 @@ func GetTeammateMatchDetails(puuid string) (TeammateMatchData, error) {
 
 	heroes, err := svc.GetMatchHistoryHeroesByIds(championIDs)
 	if err != nil {
-		fmt.Printf("[service.GetTeammateMatchDetails] failed to fetch hero info: %v\n", err)
+		slog.Warn("fetch hero info failed", "puuid", puuid, "err", err)
 		return result, nil
 	}
 

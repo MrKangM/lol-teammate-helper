@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sort"
 	"sync"
 	"time"
@@ -19,7 +20,7 @@ const maxRecentMatches = 5
 var (
 	runtimeCtx      context.Context
 	runtimeCtxMu    sync.RWMutex
-	matchHistorySvc = service.NewMatchHistoryService()
+	matchHistorySvc = service.Shared()
 )
 
 // SetRuntimeContext allows the Wails runtime context to be reused when emitting events.
@@ -35,68 +36,76 @@ func getRuntimeContext() context.Context {
 	return runtimeCtx
 }
 
+// Event names emitted to the frontend.
+const (
+	EventSnapshot = "champ-select:snapshot"
+	EventEnded    = "champ-select:ended"
+)
+
+const champSelectURI = "/lol-champ-select/v1/session"
+
 // EventHandler routes websocket events based on their URL.
-func EventHandler(url string, data json.RawMessage) {
-	fmt.Printf("Received event: %s\n", url)
-	switch url {
-	case "/lol-lobby/v2/lobby":
-		fmt.Println("Lobby event")
-	case "/lol-champ-select/v1/session":
+func EventHandler(uri string, eventType string, data json.RawMessage) {
+	switch uri {
+	case champSelectURI:
+		if eventType == "Delete" {
+			handleChampSelectEnded()
+			return
+		}
 		handleChampSelectEvent(data)
 	default:
-		fmt.Println("[EVENT DISPATCHER] unhandled event, event:" + url)
+		slog.Debug("unhandled event", "uri", uri)
 	}
+}
+
+func emit(name string, payload ...interface{}) {
+	if ctx := getRuntimeContext(); ctx != nil {
+		runtime.EventsEmit(ctx, name, payload...)
+	}
+}
+
+func handleChampSelectEnded() {
+	ClearChampSelectSnapshot()
+	emit(EventEnded)
 }
 
 func handleChampSelectEvent(data json.RawMessage) {
 	var champSelect types.ChampSelectData
 	if err := json.Unmarshal(data, &champSelect); err != nil {
-		fmt.Printf("Failed to decode champion select payload: %v\n", err)
+		slog.Warn("decode champ select payload failed", "err", err)
 		return
 	}
 
-	var (
-		wg        sync.WaitGroup
-		summaries = make([]types.TeamMemberSummary, 0, len(champSelect.MyTeam))
-		mu        sync.Mutex
-	)
-
-	for _, player := range champSelect.MyTeam {
-		playerCopy := player
-
-		wg.Add(1)
-		go func(p types.Player) {
-			defer wg.Done()
-
-			summary := buildTeamMemberSummary(p)
-
-			mu.Lock()
-			summaries = append(summaries, summary)
-			mu.Unlock()
-
-		}(playerCopy)
+	snapshot := buildSnapshot(champSelect)
+	if !StoreChampSelectSnapshot(snapshot) {
+		return // nothing visible changed since the last emit
 	}
+	emit(EventSnapshot, snapshot)
+}
 
+func buildSnapshot(champSelect types.ChampSelectData) types.ChampSelectSnapshot {
+	summaries := make([]types.TeamMemberSummary, len(champSelect.MyTeam))
+
+	var wg sync.WaitGroup
+	for i, player := range champSelect.MyTeam {
+		wg.Add(1)
+		go func(i int, p types.Player) {
+			defer wg.Done()
+			summaries[i] = buildTeamMemberSummary(p)
+		}(i, player)
+	}
 	wg.Wait()
 
 	sort.SliceStable(summaries, func(i, j int) bool {
 		return summaries[i].CellID < summaries[j].CellID
 	})
 
-	snapshot := types.ChampSelectSnapshot{
+	return types.ChampSelectSnapshot{
 		QueueID:   champSelect.QueueID,
 		GameID:    champSelect.GameID,
 		UpdatedAt: time.Now(),
 		Team:      summaries,
 	}
-
-	if ctx := getRuntimeContext(); ctx != nil {
-		runtime.EventsEmit(ctx, "champ-select:snapshot", snapshot)
-	} else {
-		fmt.Println("[dispatch.handleChampSelectEvent] runtime context is not set; skipping emit")
-	}
-
-	StoreChampSelectSnapshot(snapshot)
 }
 
 func buildTeamMemberSummary(player types.Player) types.TeamMemberSummary {
@@ -115,7 +124,7 @@ func buildTeamMemberSummary(player types.Player) types.TeamMemberSummary {
 
 	matchData, err := service.GetTeammateMatchDetails(player.Puuid)
 	if err != nil {
-		fmt.Printf("[dispatch.buildTeamMemberSummary] failed to fetch match data: %v\n", err)
+		slog.Warn("fetch match data failed", "puuid", player.Puuid, "err", err)
 		return summary
 	}
 
@@ -123,7 +132,7 @@ func buildTeamMemberSummary(player types.Player) types.TeamMemberSummary {
 	if player.ChampionID > 0 && matchHistorySvc != nil {
 		heroInfo, heroErr := matchHistorySvc.GetMatchHistoryNameAndIconByHeroId(player.ChampionID)
 		if heroErr != nil {
-			fmt.Printf("%s failed to fetch current hero %d: %v\n", "[dispatch.buildTeamMemberSummary]", player.ChampionID, heroErr)
+			slog.Warn("fetch current hero failed", "id", player.ChampionID, "err", heroErr)
 		} else {
 			summary.ChampionName = heroInfo.Name
 			icon := heroInfo.IconDataURI
@@ -139,6 +148,9 @@ func buildTeamMemberSummary(player types.Player) types.TeamMemberSummary {
 
 	return summary
 }
+
+// buildRecentMatches reads the queried player's own stats, which the LCU match
+// history endpoint always returns as the first (and only) participant of a game.
 func buildRecentMatches(history types.MatchHistory, heroMap map[int]types.HeroInfo) []types.RecentMatchSummary {
 	games := history.Games.Games
 	if len(games) == 0 {

@@ -1,245 +1,161 @@
+// Package connector keeps a WebSocket connection to the League client alive and
+// forwards its events to the dispatcher.
 package connector
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"lol-teammate-helper/internal/dispatch"
-	"lol-teammate-helper/internal/types"
+	"log/slog"
 	"net/http"
+	"strings"
+	"time"
+
+	"github.com/gorilla/websocket"
+
+	"lol-teammate-helper/internal/config"
+	"lol-teammate-helper/internal/dispatch"
+	"lol-teammate-helper/internal/lcu"
+	"lol-teammate-helper/internal/service"
+	"lol-teammate-helper/internal/types"
 )
 
 const (
-	wsBaseURL   = "wss://127.0.0.1:%d"
-	lobbyAPIURI = "/lol-lobby/v2/lobby"
+	wsURLTemplate = "wss://127.0.0.1:%d"
+
+	// Subscribing to a specific event avoids receiving every LCU event.
+	champSelectTopic = "OnJsonApiEvent_lol-champ-select_v1_session"
+	eventPrefix      = "OnJsonApiEvent"
+
+	opSubscribe = 5
+
+	minBackoff = time.Second
+	maxBackoff = 10 * time.Second
 )
 
-var testJson = `{
-  "data": {
-    "bans": {
-      "myTeamBans": [],
-      "numBans": 0,
-      "theirTeamBans": []
-    },
-    "gameId": 0,
-    "id": "mock-session",
-    "myTeam": [
-      {
-        "assignedPosition": "utility",
-        "cellId": 5,
-        "championId": 161,
-        "championPickIntent": 0,
-        "gameName": "爱听周杰伦的歌呀",
-        "internalName": "",
-        "isHumanoid": false,
-        "nameVisibilityType": "VISIBLE",
-        "obfuscatedPuuid": "",
-        "obfuscatedSummonerId": 0,
-        "pickMode": 0,
-        "pickTurn": 0,
-        "playerAlias": "",
-        "playerType": "",
-        "puuid": "aae61f13-a4aa-506a-961e-bcfa71a8dbe6",
-        "selectedSkinId": 161020,
-        "spell1Id": 14,
-        "spell2Id": 4,
-        "summonerId": 16617704853,
-        "tagLine": "70511",
-        "team": 2,
-        "wardSkinId": -1
-      },
-      {
-        "assignedPosition": "jungle",
-        "cellId": 6,
-        "championId": 64,
-        "championPickIntent": 0,
-        "gameName": "丿丿艹神话艹",
-        "internalName": "",
-        "isHumanoid": false,
-        "nameVisibilityType": "VISIBLE",
-        "obfuscatedPuuid": "",
-        "obfuscatedSummonerId": 0,
-        "pickMode": 0,
-        "pickTurn": 0,
-        "playerAlias": "",
-        "playerType": "",
-        "puuid": "29025398-9f23-5f50-a180-0dc84cc9668d",
-        "selectedSkinId": 64001,
-        "spell1Id": 4,
-        "spell2Id": 11,
-        "summonerId": 17528309496,
-        "tagLine": "81215",
-        "team": 2,
-        "wardSkinId": -1
-      },
-      {
-        "assignedPosition": "top",
-        "cellId": 7,
-        "championId": 897,
-        "championPickIntent": 0,
-        "gameName": "FY丶青铜组V",
-        "internalName": "",
-        "isHumanoid": false,
-        "nameVisibilityType": "VISIBLE",
-        "obfuscatedPuuid": "",
-        "obfuscatedSummonerId": 0,
-        "pickMode": 0,
-        "pickTurn": 0,
-        "playerAlias": "",
-        "playerType": "",
-        "puuid": "b82ef168-018a-533b-904d-b767609e4bb8",
-        "selectedSkinId": 897000,
-        "spell1Id": 4,
-        "spell2Id": 12,
-        "summonerId": 15737607533,
-        "tagLine": "52566",
-        "team": 2,
-        "wardSkinId": -1
-      },
-      {
-        "assignedPosition": "middle",
-        "cellId": 8,
-        "championId": 105,
-        "championPickIntent": 0,
-        "gameName": "我叫王俊凯",
-        "internalName": "",
-        "isHumanoid": false,
-        "nameVisibilityType": "VISIBLE",
-        "obfuscatedPuuid": "",
-        "obfuscatedSummonerId": 0,
-        "pickMode": 0,
-        "pickTurn": 0,
-        "playerAlias": "",
-        "playerType": "",
-        "puuid": "4f4ff871-cda6-58f0-b759-6964c3b144c0",
-        "selectedSkinId": 105001,
-        "spell1Id": 14,
-        "spell2Id": 4,
-        "summonerId": 16685912130,
-        "tagLine": "82964",
-        "team": 2,
-        "wardSkinId": -1
-      },
-      {
-        "assignedPosition": "bottom",
-        "cellId": 9,
-        "championId": 15,
-        "championPickIntent": 0,
-        "gameName": "这波让我拉扯",
-        "internalName": "",
-        "isHumanoid": false,
-        "nameVisibilityType": "VISIBLE",
-        "obfuscatedPuuid": "",
-        "obfuscatedSummonerId": 0,
-        "pickMode": 0,
-        "pickTurn": 0,
-        "playerAlias": "",
-        "playerType": "",
-        "puuid": "637f3866-b9ad-5f33-81b4-1d7c393cc770",
-        "selectedSkinId": 15034,
-        "spell1Id": 4,
-        "spell2Id": 21,
-        "summonerId": 17912364269,
-        "tagLine": "82413",
-        "team": 2,
-        "wardSkinId": -1
-      }
-    ],
-    "queueId": 420
-  },
-  "eventType": "Update",
-  "uri": "/lol-champ-select/v1/session"
-}`
-
-func Connection(port int, authHeader string) {
-	url := fmt.Sprintf(wsBaseURL, port)
-
-	dialer := websocket.Dialer{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	headers := http.Header{}
-	headers.Set("Authorization", authHeader)
-	headers.Set("Content-Type", "application/json")
-	headers.Set("Accept", "*/*")
-
-	conn, resp, err := dialer.Dial(url, headers)
-	if err != nil {
-		fmt.Printf("[connector.Connection] dial %s failed: %v\n", url, err)
-		return
-	}
-
-	if resp != nil && resp.StatusCode != http.StatusSwitchingProtocols {
-		fmt.Printf("[connector.Connection] dial %s failed: %v\n", url, resp.StatusCode)
-		_ = conn.Close()
-		return
-	}
-
-	payload := []interface{}{5, "OnJsonApiEvent", lobbyAPIURI}
-	if err := conn.WriteJSON(payload); err != nil {
-		fmt.Printf("subscribe %s failed: %v\n", lobbyAPIURI, err)
-	}
-
-	msgCh := make(chan types.WSMessageType, 10)
-	defer func() {
-		_ = conn.Close()
-		close(msgCh)
-	}()
-
-	go msgReader(msgCh)
-
-	for {
-		_, message, err := conn.ReadMessage()
+// Run detects the League client and keeps a websocket connected to it until ctx
+// is cancelled. Credentials are re-detected on every attempt because the client
+// picks a new port and token each time it starts.
+func Run(ctx context.Context) {
+	backoff := minBackoff
+	for ctx.Err() == nil {
+		creds, err := lcu.Detect()
 		if err != nil {
-			fmt.Printf("[connector.Connection] read failed: %v\n", err)
-			return
-		}
-
-		var rawPayload []json.RawMessage
-		if err := json.Unmarshal(message, &rawPayload); err != nil {
-			fmt.Printf("[connector.Connection] invalid payload: %v\n", err)
-			continue
-		}
-
-		if len(rawPayload) < 3 {
-			continue
-		}
-
-		var eventName string
-		if err := json.Unmarshal(rawPayload[1], &eventName); err != nil {
-			fmt.Printf("[connector.Connection] parse event name failed: %v\n", err)
-			continue
-		}
-
-		if eventName != "OnJsonApiEvent" {
-			continue
-		}
-
-		var msg types.WSMessageType
-		//if err := json.Unmarshal(rawPayload[2], &msg); err != nil {
-		//	fmt.Printf("[connector.Connection] failed to decode msg data: %v\n", err)
-		//	if err := json.Unmarshal([]byte(testJson), &msg); err != nil {
-		//		fmt.Printf("[connector.Connection] failed to decode fallback msg: %v\n", err)
-		//		continue
-		//	}
-		//}
-
-		if len(msg.Data) == 0 {
-			if err := json.Unmarshal([]byte(testJson), &msg); err != nil {
-				fmt.Printf("[connector.Connection] failed to decode fallback msg: %v\n", err)
-				continue
+			slog.Debug("league client not detected", "err", err)
+		} else {
+			if config.Update(creds.Port, creds.Token, creds.Region) {
+				service.Shared().ResetCaches()
+			}
+			start := time.Now()
+			if err := session(ctx, creds.Port); err != nil {
+				slog.Warn("websocket session ended", "err", err)
+			}
+			if time.Since(start) > 30*time.Second {
+				backoff = minBackoff // it was a healthy connection; retry promptly
 			}
 		}
 
-		msgCh <- msg
-		fmt.Println("写入数据")
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(backoff):
+		}
+		if backoff *= 2; backoff > maxBackoff {
+			backoff = maxBackoff
+		}
 	}
 }
 
-func msgReader(msgCh <-chan types.WSMessageType) {
-	for msg := range msgCh {
-		dispatch.EventHandler(msg.Uri, msg.Data)
-		fmt.Printf("读取数据:%d\n", len(msgCh))
+func session(ctx context.Context, port int) error {
+	cfg, ok := config.Instance()
+	if !ok {
+		return fmt.Errorf("config not initialised")
+	}
+
+	dialer := websocket.Dialer{
+		TLSClientConfig:  &tls.Config{InsecureSkipVerify: true},
+		HandshakeTimeout: 10 * time.Second,
+	}
+	headers := http.Header{}
+	headers.Set("Authorization", cfg.Token)
+
+	conn, _, err := dialer.DialContext(ctx, fmt.Sprintf(wsURLTemplate, port), headers)
+	if err != nil {
+		return fmt.Errorf("dial: %w", err)
+	}
+	defer conn.Close()
+
+	// Unblock ReadMessage when the app is shutting down.
+	go func() {
+		<-ctx.Done()
+		_ = conn.Close()
+	}()
+
+	if err := conn.WriteJSON([]interface{}{opSubscribe, champSelectTopic}); err != nil {
+		return fmt.Errorf("subscribe: %w", err)
+	}
+	slog.Info("connected to league client", "port", port)
+
+	// A single worker handles events in order; only the latest pending event is
+	// kept while it is busy, since each champ select update supersedes the last.
+	events := make(chan types.WSMessageType, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for msg := range events {
+			dispatch.EventHandler(msg.Uri, msg.EventType, msg.Data)
+		}
+	}()
+	defer func() {
+		close(events)
+		<-done
+	}()
+
+	for {
+		_, raw, err := conn.ReadMessage()
+		if err != nil {
+			return fmt.Errorf("read: %w", err)
+		}
+		msg, ok := parseMessage(raw)
+		if !ok {
+			continue
+		}
+		offerLatest(events, msg)
+	}
+}
+
+// parseMessage decodes a WAMP-style frame [opcode, topic, payload].
+func parseMessage(raw []byte) (types.WSMessageType, bool) {
+	var frame []json.RawMessage
+	if err := json.Unmarshal(raw, &frame); err != nil || len(frame) < 3 {
+		return types.WSMessageType{}, false
+	}
+
+	var topic string
+	if err := json.Unmarshal(frame[1], &topic); err != nil || !strings.HasPrefix(topic, eventPrefix) {
+		return types.WSMessageType{}, false
+	}
+
+	var msg types.WSMessageType
+	if err := json.Unmarshal(frame[2], &msg); err != nil {
+		slog.Warn("decode event payload failed", "topic", topic, "err", err)
+		return types.WSMessageType{}, false
+	}
+	return msg, true
+}
+
+// offerLatest queues msg, replacing a stale queued message if the worker is behind.
+func offerLatest(ch chan types.WSMessageType, msg types.WSMessageType) {
+	for {
+		select {
+		case ch <- msg:
+			return
+		default:
+		}
+		select {
+		case <-ch: // drop the stale one
+		default:
+		}
 	}
 }

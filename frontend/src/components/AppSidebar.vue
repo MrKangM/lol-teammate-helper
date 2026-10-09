@@ -127,7 +127,7 @@ const defaultSidebarData = {
       items: [
         {
           title: "生涯",
-          url: "hello-world",
+          url: "player-profile",
         },
       ],
     },

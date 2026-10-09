@@ -2,7 +2,7 @@ package types
 
 import "time"
 
-// RecentMatchSummary captures the essential details of a teammate\'s recent ranked match.
+// RecentMatchSummary captures the essential details of a teammate's recent ranked match.
 type RecentMatchSummary struct {
 	ChampionID   int    `json:"championId"`
 	ChampionName string `json:"championName"`
@@ -26,7 +26,6 @@ type TeamMemberSummary struct {
 	ChampionIcon     string               `json:"championIcon"`
 	CellID           int                  `json:"cellId"`
 	RecentMatches    []RecentMatchSummary `json:"recentMatches"`
-	SelectChampIcon  string               `json:"selectChampIcon"`
 }
 
 // ChampSelectSnapshot stores the latest champion select data for reuse in the UI.

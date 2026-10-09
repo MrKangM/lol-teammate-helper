@@ -10,6 +10,6 @@ export function GetImgSrc(arg1) {
   return window['go']['main']['App']['GetImgSrc'](arg1);
 }
 
-export function Greet(arg1) {
-  return window['go']['main']['App']['Greet'](arg1);
+export function GetCurrentSummoner() {
+  return window['go']['main']['App']['GetCurrentSummoner']();
 }

@@ -13,7 +13,7 @@ type MatchHistory struct {
 }
 
 func NewMatchHistory() *MatchHistory {
-	return &MatchHistory{svc: service.NewMatchHistoryService()}
+	return &MatchHistory{svc: service.Shared()}
 }
 
 // GetPlayerRankMatches validates the input and delegates to the service layer.

@@ -30,7 +30,6 @@ func (pc *PlayerController) GetPlayerRankData(uuid string) types.RankedStats {
 	}
 
 	endpoint := fmt.Sprintf("/lol-ranked/v1/ranked-stats/%s", uuid)
-	fmt.Println(logPrefix + " requesting " + endpoint)
 
 	body, err := cfg.SendHttpRequest(endpoint, http.MethodGet)
 	if err != nil {
@@ -45,9 +44,5 @@ func (pc *PlayerController) GetPlayerRankData(uuid string) types.RankedStats {
 	}
 
 	utils.ConvertRankDataToChinese(&rankInfo)
-	//fmt.Println(logPrefix + " ====================================")
-	//fmt.Printf("%s raw response: %#v\n", logPrefix, rankInfo)
-	//fmt.Println(logPrefix + " summary: " + utils.FormatRankInfo(rankInfo))
-	//GetPlayerRankMatches(uuid)
 	return rankInfo
 }

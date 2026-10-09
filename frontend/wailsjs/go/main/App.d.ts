@@ -6,4 +6,4 @@ export function GetCurrentChampSelectSnapshot():Promise<types.ChampSelectSnapsho
 
 export function GetImgSrc(arg1:number):Promise<string>;
 
-export function Greet(arg1:string):Promise<types.IPlayerBaseData>;
+export function GetCurrentSummoner():Promise<types.IPlayerBaseData>;

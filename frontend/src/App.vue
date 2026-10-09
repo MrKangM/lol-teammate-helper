@@ -7,7 +7,7 @@ export const containerClass = "w-full h-full"
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import AppSidebar from "@/components/AppSidebar.vue"
-import HelloWorld from "@/components/HelloWorld.vue"
+import PlayerProfile from "@/components/PlayerProfile.vue"
 import CurrentBp from "@/components/CurrentBp.vue"
 import {
   Breadcrumb,
@@ -23,17 +23,20 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { GetImgSrc, Greet } from "../wailsjs/go/main/App"
+import { GetImgSrc, GetCurrentSummoner } from "../wailsjs/go/main/App"
 import { IPlayerBaseData } from "@/interface/baseData"
 import { GetPlayerRankData } from "../wailsjs/go/controller/PlayerController"
 import type { IRankedStats } from "@/interface/rankData"
 
 const playerData = ref<IPlayerBaseData | null>(null)
 const rankData = ref<IRankedStats>()
-const activePanel = ref<"dashboard" | "helloWorld" | "currentBp">("dashboard")
+const activePanel = ref<"dashboard" | "playerProfile" | "currentBp">("dashboard")
 const isLoading = ref(true)
 const retryTimer = ref<number | null>(null)
 const retryCount = ref(0)
+
+const panelTitles = { dashboard: "总览", playerProfile: "个人资料", currentBp: "当前选人" } as const
+const panelTitle = computed(() => panelTitles[activePanel.value])
 
 const hasPlayerData = computed(() => playerData.value !== null)
 const showClientPrompt = computed(() => isLoading.value || !hasPlayerData.value)
@@ -67,23 +70,6 @@ async function waitForBackendBridge(maxAttempts = 50, delay = 100) {
   return true
 }
 
-const parsePlayerData = (raw: unknown): Partial<IPlayerBaseData> => {
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw) as Partial<IPlayerBaseData>
-    } catch (error) {
-      console.warn("failed to parse player data", error)
-      return {}
-    }
-  }
-
-  if (typeof raw === "object" && raw !== null) {
-    return raw as Partial<IPlayerBaseData>
-  }
-
-  return {}
-}
-
 function scheduleReload() {
   if (retryTimer.value !== null) {
     clearTimeout(retryTimer.value)
@@ -108,23 +94,19 @@ async function loadPlayerData() {
 
     let baseData: IPlayerBaseData
     try {
-      baseData = await Greet("load-player")
+      baseData = await GetCurrentSummoner()
     } catch (requestError) {
       console.error("failed to fetch summoner data", requestError)
       scheduleReload()
       return
     }
 
-    // const parsedBaseData = rawBaseData
-    // const hasBaseData = Object.keys(parsedBaseData).length > 0
+    // The backend returns an empty payload until the League client is detected.
+    if (!baseData?.puuid) {
+      scheduleReload()
+      return
+    }
 
-    // if (!hasBaseData) {
-    //   console.warn("player data unavailable; waiting for League client")
-    //   scheduleReload()
-    //   return
-    // }
-
-     // baseData = parsedBaseData as IplayerBaseData
     let iconImgSrc: string | undefined
     const profileIconId = typeof baseData.profileIconId === "number" ? baseData.profileIconId : undefined
 
@@ -148,7 +130,6 @@ async function loadPlayerData() {
     if (puuid.length > 0) {
       try {
         rankData.value = await GetPlayerRankData(puuid)
-        console.log(`API获取的排位数据:${JSON.stringify(rankData)}`)
       } catch (rankError) {
         console.error("failed to fetch player rank data", rankError)
       }
@@ -183,8 +164,8 @@ type SidebarNavigatePayload = {
 }
 
 const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
-  if (payload.item.url === "hello-world") {
-    activePanel.value = "helloWorld"
+  if (payload.item.url === "player-profile") {
+    activePanel.value = "playerProfile"
   } else if (payload.item.url === "current-bp") {
     activePanel.value = "currentBp"
   } else {
@@ -236,20 +217,20 @@ const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
               <BreadcrumbList>
                 <BreadcrumbItem class="hidden md:block">
                   <BreadcrumbLink href="#">
-                    Building Your Application
+                    英雄联盟队友助手
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator class="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
+                  <BreadcrumbPage>{{ panelTitle }}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
         <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <template v-if="activePanel === 'helloWorld'">
-            <HelloWorld :player-data="playerData" :rank-data="rankData" />
+          <template v-if="activePanel === 'playerProfile'">
+            <PlayerProfile :player-data="playerData" :rank-data="rankData" />
           </template>
           <template v-else-if="activePanel === 'currentBp'">
             <CurrentBp />

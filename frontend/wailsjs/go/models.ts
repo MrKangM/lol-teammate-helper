@@ -38,7 +38,6 @@ export namespace types {
 	    championIcon: string;
 	    cellId: number;
 	    recentMatches: RecentMatchSummary[];
-	    selectChampIcon: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new TeamMemberSummary(source);
@@ -55,7 +54,6 @@ export namespace types {
 	        this.championIcon = source["championIcon"];
 	        this.cellId = source["cellId"];
 	        this.recentMatches = this.convertValues(source["recentMatches"], RecentMatchSummary);
-	        this.selectChampIcon = source["selectChampIcon"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

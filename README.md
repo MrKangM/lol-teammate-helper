@@ -1,27 +1,45 @@
-# README
+# lol-teammate-helper
 
-## About
+英雄联盟选人阶段的队友助手：通过本地 League Client (LCU) 接口读取选人会话，实时展示队友的近期排位战绩与段位。
 
-This is the official Wails Vue-TS template.
+基于 [Wails](https://wails.io)（Go）+ Vue 3 + TypeScript + Tailwind。
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+## 功能
 
-## Quick Start
+- 自动检测运行中的英雄联盟客户端（端口 / token / 大区），客户端重启后自动重连
+- 监听选人会话（`lol-champ-select`），展示队友近 5 场战绩与当前英雄
+- 个人资料与排位段位总览
 
-```azure
-lol-teammate-helper: cd frontend
-lol-teammate-helper/frontend: npm run dev
-lol-teammate-helper: wails dev
+## 开发
+
+```bash
+cd frontend && npm ci && cd ..
+wails dev
 ```
 
-## Live Development
+测试（后端纯逻辑部分）：
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+```bash
+go test ./internal/...
+```
 
-## Building
+## 构建
 
-To build a redistributable, production mode package, use `wails build`.
+```bash
+wails build
+```
+
+## 目录结构
+
+| 路径 | 说明 |
+| --- | --- |
+| `app.go` / `main.go` | Wails 入口与前端绑定 |
+| `internal/lcu` | 探测客户端进程并解析凭据 |
+| `internal/connector` | WebSocket 连接、订阅、断线重连 |
+| `internal/dispatch` | 事件分发，组装选人快照并推送给前端 |
+| `internal/service` | 战绩 / 英雄数据查询与缓存 |
+| `frontend/` | Vue 前端 |
+
+## 免责声明
+
+本工具只读取客户端在本机暴露的官方 LCU 接口，不读写游戏内存、不修改客户端。与 Riot Games 无关联。
