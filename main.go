@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"lol-teammate-helper/internal/controller"
+	"lol-teammate-helper/internal/logging"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -13,6 +14,9 @@ import (
 var assets embed.FS
 
 func main() {
+	_, closeLog := logging.Setup()
+	defer closeLog()
+
 	// Create an instance of the app structure
 	app := NewApp()
 	pc := controller.NewPlayerController()

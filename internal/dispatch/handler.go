@@ -80,6 +80,8 @@ func handleSessionEnded() {
 func publish(snapshot types.ChampSelectSnapshot) {
 	snapshot.UpdatedAt = time.Now()
 	if StoreChampSelectSnapshot(snapshot) {
+		slog.Info("snapshot published", "phase", snapshot.Phase, "queue", snapshot.QueueID,
+			"team", len(snapshot.Team), "enemy", len(snapshot.Enemy))
 		emit(EventSnapshot, snapshot)
 	}
 }

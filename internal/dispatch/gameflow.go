@@ -17,6 +17,9 @@ func handleGameflowEvent(data json.RawMessage) {
 		return
 	}
 
+	slog.Info("gameflow phase", "phase", session.Phase,
+		"teamOne", len(session.GameData.TeamOne), "teamTwo", len(session.GameData.TeamTwo))
+
 	switch session.Phase {
 	case "GameStart", "InProgress", "Reconnect":
 		publishInGame(session)
