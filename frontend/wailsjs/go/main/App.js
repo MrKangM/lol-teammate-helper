@@ -6,10 +6,10 @@ export function GetCurrentChampSelectSnapshot() {
   return window['go']['main']['App']['GetCurrentChampSelectSnapshot']();
 }
 
-export function GetImgSrc(arg1) {
-  return window['go']['main']['App']['GetImgSrc'](arg1);
-}
-
 export function GetCurrentSummoner() {
   return window['go']['main']['App']['GetCurrentSummoner']();
+}
+
+export function GetImgSrc(arg1) {
+  return window['go']['main']['App']['GetImgSrc'](arg1);
 }

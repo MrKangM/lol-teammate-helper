@@ -4,6 +4,6 @@ import {types} from '../models';
 
 export function GetCurrentChampSelectSnapshot():Promise<types.ChampSelectSnapshot>;
 
-export function GetImgSrc(arg1:number):Promise<string>;
-
 export function GetCurrentSummoner():Promise<types.IPlayerBaseData>;
+
+export function GetImgSrc(arg1:number):Promise<string>;
