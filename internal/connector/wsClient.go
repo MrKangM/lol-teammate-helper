@@ -113,6 +113,7 @@ func session(ctx context.Context, port int) error {
 	go func() {
 		defer close(done)
 		for msg := range q.out() {
+			logEvent(msg)
 			dispatch.EventHandler(msg.Uri, msg.EventType, msg.Data)
 		}
 	}()
@@ -147,6 +148,23 @@ func bootstrap(cfg *config.AppConfig, q *eventQueue) {
 		}
 		q.push(types.WSMessageType{Uri: uri, EventType: "Update", Data: body})
 	}
+}
+
+// maxLoggedPayload bounds how much of an event body is written to the log.
+const maxLoggedPayload = 20000
+
+// logEvent records the raw event at debug level (LTH_LOG_LEVEL=debug) so the
+// exact fields the client sends can be inspected when something looks wrong.
+func logEvent(msg types.WSMessageType) {
+	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
+		return
+	}
+	body := string(msg.Data)
+	truncated := false
+	if len(body) > maxLoggedPayload {
+		body, truncated = body[:maxLoggedPayload], true
+	}
+	slog.Debug("event", "uri", msg.Uri, "type", msg.EventType, "bytes", len(msg.Data), "truncated", truncated, "data", body)
 }
 
 // parseMessage decodes a WAMP-style frame [opcode, topic, payload].

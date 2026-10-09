@@ -39,7 +39,7 @@ wails dev                                     # 开发模式（热更新，终�
 
 - `wails dev`：日志直接打印在运行命令的终端里。
 - 打包后的 exe 没有控制台，日志写入 `%AppData%\lol-teammate-helper\logs\app.log`（Linux/macOS 为 `~/.config/lol-teammate-helper/logs/app.log`），超过 5 MB 会重新开始。
-- 默认只记录 INFO 及以上。需要看每一次 LCU 请求时，设置环境变量 `LTH_LOG_LEVEL=debug` 再启动：
+- 默认只记录 INFO 及以上。需要看每一次 LCU 请求和收到的原始事件内容（选人、游戏阶段）时，设置环境变量 `LTH_LOG_LEVEL=debug` 再启动：
 
 ```powershell
 $env:LTH_LOG_LEVEL = "debug"; wails dev
