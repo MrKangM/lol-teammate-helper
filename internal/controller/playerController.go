@@ -1,12 +1,11 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
-	"lol-teammate-helper/internal/config"
+
+	"lol-teammate-helper/internal/service"
 	"lol-teammate-helper/internal/types"
 	"lol-teammate-helper/internal/utils"
-	"net/http"
 )
 
 type PlayerController struct{}
@@ -23,23 +22,9 @@ func (pc *PlayerController) GetPlayerRankData(uuid string) types.RankedStats {
 		return types.RankedStats{}
 	}
 
-	cfg, ok := config.Instance()
-	if !ok {
-		fmt.Println(logPrefix + " riot credentials are not initialised")
-		return types.RankedStats{}
-	}
-
-	endpoint := fmt.Sprintf("/lol-ranked/v1/ranked-stats/%s", uuid)
-
-	body, err := cfg.SendHttpRequest(endpoint, http.MethodGet)
+	rankInfo, err := service.Shared().GetRankedStats(uuid)
 	if err != nil {
-		fmt.Printf("%s failed to request rank data: %v\n", logPrefix, err)
-		return types.RankedStats{}
-	}
-
-	var rankInfo types.RankedStats
-	if err := json.Unmarshal(body, &rankInfo); err != nil {
-		fmt.Printf("%s failed to decode rank data: %v\n", logPrefix, err)
+		fmt.Printf("%s failed to load rank data: %v\n", logPrefix, err)
 		return types.RankedStats{}
 	}
 

@@ -35,6 +35,14 @@ type MatchHistoryService struct {
 	heroCache  map[int]types.HeroInfo
 	matchCache map[string]matchCacheEntry
 	now        func() time.Time
+
+	// Generic LCU response bodies (rank, level, mastery) keyed by endpoint.
+	bodyCache map[string]bodyCacheEntry
+	// Ranked game lists keyed by puuid.
+	gamesCache map[string]gamesCacheEntry
+	// Item metadata for the end-of-game screen.
+	itemPaths map[int]string
+	itemIcons map[int]string
 }
 
 // NewMatchHistoryService constructs a service with empty caches.
@@ -42,6 +50,9 @@ func NewMatchHistoryService() *MatchHistoryService {
 	return &MatchHistoryService{
 		heroCache:  make(map[int]types.HeroInfo),
 		matchCache: make(map[string]matchCacheEntry),
+		bodyCache:  make(map[string]bodyCacheEntry),
+		gamesCache: make(map[string]gamesCacheEntry),
+		itemIcons:  make(map[int]string),
 		now:        time.Now,
 	}
 }
@@ -63,6 +74,10 @@ func (svc *MatchHistoryService) ResetCaches() {
 	defer svc.cacheMu.Unlock()
 	svc.heroCache = make(map[int]types.HeroInfo)
 	svc.matchCache = make(map[string]matchCacheEntry)
+	svc.bodyCache = make(map[string]bodyCacheEntry)
+	svc.gamesCache = make(map[string]gamesCacheEntry)
+	svc.itemPaths = nil
+	svc.itemIcons = make(map[int]string)
 }
 
 // GetPlayerRankMatches returns the ranked match history for the provided PUUID.

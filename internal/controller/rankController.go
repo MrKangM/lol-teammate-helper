@@ -84,3 +84,21 @@ func (mh *MatchHistory) GetMatchHistoryNameAndIconByHeroId(id int) (types.HeroIn
 
 	return info, nil
 }
+
+// GetGameDetail returns the end-of-game scoreboard (both teams) of one match.
+// highlightPuuid marks the row of the player the user is inspecting.
+func (mh *MatchHistory) GetGameDetail(gameID int64, highlightPuuid string) (types.GameDetail, error) {
+	if gameID <= 0 {
+		return types.GameDetail{}, errors.New("invalid game id")
+	}
+	if mh == nil || mh.svc == nil {
+		return types.GameDetail{}, errors.New("match history service not initialised")
+	}
+
+	detail, err := mh.svc.GetGameDetail(gameID, highlightPuuid)
+	if err != nil {
+		fmt.Printf("[rankController.GetGameDetail] failed: %v\n", err)
+		return types.GameDetail{}, err
+	}
+	return detail, nil
+}

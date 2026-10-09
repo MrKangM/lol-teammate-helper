@@ -24,8 +24,9 @@ import (
 const (
 	wsURLTemplate = "wss://127.0.0.1:%d"
 
-	// Subscribing to a specific event avoids receiving every LCU event.
+	// Subscribing to specific events avoids receiving every LCU event.
 	champSelectTopic = "OnJsonApiEvent_lol-champ-select_v1_session"
+	gameflowTopic    = "OnJsonApiEvent_lol-gameflow_v1_session"
 	eventPrefix      = "OnJsonApiEvent"
 
 	opSubscribe = 5
@@ -92,25 +93,30 @@ func session(ctx context.Context, port int) error {
 		_ = conn.Close()
 	}()
 
-	if err := conn.WriteJSON([]interface{}{opSubscribe, champSelectTopic}); err != nil {
-		return fmt.Errorf("subscribe: %w", err)
+	for _, topic := range []string{champSelectTopic, gameflowTopic} {
+		if err := conn.WriteJSON([]interface{}{opSubscribe, topic}); err != nil {
+			return fmt.Errorf("subscribe %s: %w", topic, err)
+		}
 	}
 	slog.Info("connected to league client", "port", port)
 
-	// A single worker handles events in order; only the latest pending event is
-	// kept while it is busy, since each champ select update supersedes the last.
-	events := make(chan types.WSMessageType, 1)
+	// A single worker handles events in order. While it is busy only the latest
+	// event per resource is kept, since each update supersedes the previous one.
+	q := newEventQueue()
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		for msg := range events {
+		for msg := range q.out() {
 			dispatch.EventHandler(msg.Uri, msg.EventType, msg.Data)
 		}
 	}()
 	defer func() {
-		close(events)
+		q.close()
 		<-done
 	}()
+
+	// Pick up a game that was already in progress before we connected.
+	go bootstrap(cfg, q)
 
 	for {
 		_, raw, err := conn.ReadMessage()
@@ -121,7 +127,19 @@ func session(ctx context.Context, port int) error {
 		if !ok {
 			continue
 		}
-		offerLatest(events, msg)
+		q.push(msg)
+	}
+}
+
+// bootstrap feeds the current state of each resource into the queue as if it
+// had just been pushed, so nothing is missed when the app starts mid-game.
+func bootstrap(cfg *config.AppConfig, q *eventQueue) {
+	for _, uri := range []string{dispatch.GameflowURI, dispatch.ChampSelectURI} {
+		body, err := cfg.SendHttpRequest(uri, http.MethodGet)
+		if err != nil {
+			continue // e.g. 404 while not in champ select
+		}
+		q.push(types.WSMessageType{Uri: uri, EventType: "Update", Data: body})
 	}
 }
 
@@ -143,19 +161,4 @@ func parseMessage(raw []byte) (types.WSMessageType, bool) {
 		return types.WSMessageType{}, false
 	}
 	return msg, true
-}
-
-// offerLatest queues msg, replacing a stale queued message if the worker is behind.
-func offerLatest(ch chan types.WSMessageType, msg types.WSMessageType) {
-	for {
-		select {
-		case ch <- msg:
-			return
-		default:
-		}
-		select {
-		case <-ch: // drop the stale one
-		default:
-		}
-	}
 }

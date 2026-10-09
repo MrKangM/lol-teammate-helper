@@ -139,3 +139,16 @@ func GetServerChineseName(serverName string) string {
 	}
 	return serverName
 }
+
+// TierName returns the Chinese display name for an LCU tier key such as "GOLD".
+func TierName(tierKey string) string {
+	if name, ok := tierNames[tierKey]; ok {
+		return name
+	}
+	return tierKey
+}
+
+// QueueName returns the Chinese display name of a ranked queue type.
+func QueueName(queueType string) string {
+	return getQueueChineseName(queueType)
+}
