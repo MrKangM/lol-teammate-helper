@@ -22,13 +22,15 @@ func main() {
 	mc := controller.NewMatchHistory()
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "lol-teammate-helper",
-		Width:  1024,
-		Height: 768,
+		Title:     "lol-teammate-helper",
+		Width:     1280,
+		Height:    820,
+		MinWidth:  1100,
+		MinHeight: 640,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		BackgroundColour: &options.RGBA{R: 1, G: 10, B: 19, A: 1},
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,

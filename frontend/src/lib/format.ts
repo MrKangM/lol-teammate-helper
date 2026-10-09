@@ -57,16 +57,26 @@ export const timeAgo = (epochMs?: number, now: number = Date.now()) => {
   return `${Math.floor(days / 30)}个月前`
 }
 
-export const RATING_STYLES: Record<string, string> = {
-  大腿: "bg-amber-500 text-white",
-  上等马: "bg-emerald-500 text-white",
-  中等马: "bg-sky-500/80 text-white",
-  下等马: "bg-rose-500/80 text-white",
+/** Text colour and badge style per rating label. */
+export const RATING_STYLES: Record<string, { badge: string; strip: string }> = {
+  大腿: { badge: "bg-horse-top/15 text-horse-top border-horse-top/50", strip: "bg-horse-top" },
+  上等马: { badge: "bg-horse-good/15 text-horse-good border-horse-good/50", strip: "bg-horse-good" },
+  中等马: { badge: "bg-horse-mid/15 text-horse-mid border-horse-mid/50", strip: "bg-horse-mid" },
+  下等马: { badge: "bg-horse-low/15 text-horse-low border-horse-low/50", strip: "bg-horse-low" },
 }
 
 export const PHASE_LABELS: Record<string, string> = {
+  None: "空闲",
+  Lobby: "房间中",
+  Matchmaking: "匹配中",
+  ReadyCheck: "等待接受",
   ChampSelect: "选人中",
   GameStart: "加载中",
   InProgress: "游戏中",
-  Reconnect: "游戏中",
+  Reconnect: "重新连接",
+  WaitingForStats: "结算中",
+  PreEndOfGame: "结算中",
+  EndOfGame: "对局结束",
 }
+
+export const hasBridge = () => typeof (window as any)?.go?.main?.App?.GetDiagnostics === "function"

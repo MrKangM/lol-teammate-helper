@@ -5,15 +5,3 @@
 export function GetGameDetail(arg1, arg2) {
   return window['go']['controller']['MatchHistory']['GetGameDetail'](arg1, arg2);
 }
-
-export function GetMatchHistoryHeroesByIds(arg1) {
-  return window['go']['controller']['MatchHistory']['GetMatchHistoryHeroesByIds'](arg1);
-}
-
-export function GetMatchHistoryNameAndIconByHeroId(arg1) {
-  return window['go']['controller']['MatchHistory']['GetMatchHistoryNameAndIconByHeroId'](arg1);
-}
-
-export function GetPlayerRankMatches(arg1) {
-  return window['go']['controller']['MatchHistory']['GetPlayerRankMatches'](arg1);
-}

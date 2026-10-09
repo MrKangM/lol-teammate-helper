@@ -35,13 +35,27 @@ wails dev                                     # 开发模式（热更新，终�
 
 使用方法：先登录并保持英雄联盟客户端运行，再启动本软件（顺序反过来也可以，软件会自动重连）。进入英雄选择后自动显示队友；进入加载界面后可切换到“对手”。
 
-## 日志
+## 日志与诊断
 
-- `wails dev`：日志直接打印在运行命令的终端里。
-- 打包后的 exe 没有控制台，日志写入 `%AppData%\lol-teammate-helper\logs\app.log`（Linux/macOS 为 `~/.config/lol-teammate-helper/logs/app.log`），超过 5 MB 会重新开始。
-- 默认只记录 INFO 及以上。需要看每一次 LCU 请求和收到的原始事件内容（选人、游戏阶段）时，设置环境变量 `LTH_LOG_LEVEL=debug` 再启动：
+最方便的方式：软件左侧的 **“诊断”页** 会显示连接状态、最近错误、日志文件路径，以及最近收到的原始事件；点“复制诊断信息”就能把现场发给开发者，“打开日志目录”可直接打开日志所在文件夹。
+
+日志文件：
+
+- `wails dev`：同样的日志也会打印在运行命令的终端里。
+- 日志写入 `%AppData%\lol-teammate-helper\logs\app.log`（Linux/macOS 为 `~/.config/lol-teammate-helper/logs/app.log`），超过 5 MB 会重新开始。
+- 默认只记录 INFO 及以上。需要看每一次 LCU 请求和收到的原始事件内容时，设置环境变量 `LTH_LOG_LEVEL=debug` 再启动。
+
+在命令行（cmd）里查看日志末尾：
+
+```bat
+powershell -NoProfile -Command "Get-Content \"$env:APPDATA\lol-teammate-helper\logs\app.log\" -Tail 60"
+findstr /C:"level=WARN" "%APPDATA%\lol-teammate-helper\logs\app.log"
+```
+
+在 PowerShell 里：
 
 ```powershell
+Get-Content "$env:APPDATA\lol-teammate-helper\logs\app.log" -Tail 60
 $env:LTH_LOG_LEVEL = "debug"; wails dev
 ```
 

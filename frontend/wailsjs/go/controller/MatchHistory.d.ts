@@ -3,9 +3,3 @@
 import {types} from '../models';
 
 export function GetGameDetail(arg1:number,arg2:string):Promise<types.GameDetail>;
-
-export function GetMatchHistoryHeroesByIds(arg1:Array<number>):Promise<Record<number, types.HeroInfo>>;
-
-export function GetMatchHistoryNameAndIconByHeroId(arg1:number):Promise<types.HeroInfo>;
-
-export function GetPlayerRankMatches(arg1:string):Promise<types.MatchHistory>;
