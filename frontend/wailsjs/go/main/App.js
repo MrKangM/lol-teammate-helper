@@ -6,10 +6,30 @@ export function GetCurrentChampSelectSnapshot() {
   return window['go']['main']['App']['GetCurrentChampSelectSnapshot']();
 }
 
+export function GetCurrentSummoner() {
+  return window['go']['main']['App']['GetCurrentSummoner']();
+}
+
+export function GetDiagnostics() {
+  return window['go']['main']['App']['GetDiagnostics']();
+}
+
 export function GetImgSrc(arg1) {
   return window['go']['main']['App']['GetImgSrc'](arg1);
 }
 
-export function Greet(arg1) {
-  return window['go']['main']['App']['Greet'](arg1);
+export function GetMyCareer() {
+  return window['go']['main']['App']['GetMyCareer']();
+}
+
+export function GetPositionIcon(arg1) {
+  return window['go']['main']['App']['GetPositionIcon'](arg1);
+}
+
+export function GetRankEmblem(arg1) {
+  return window['go']['main']['App']['GetRankEmblem'](arg1);
+}
+
+export function OpenLogDir() {
+  return window['go']['main']['App']['OpenLogDir']();
 }

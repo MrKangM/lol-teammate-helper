@@ -4,17 +4,19 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"lol-teammate-helper/internal/config"
-	"lol-teammate-helper/internal/connector"
-	"lol-teammate-helper/internal/dispatch"
-	"lol-teammate-helper/internal/types"
+	"log/slog"
 	"net/http"
 	"os/exec"
-	"regexp"
-	"strconv"
-	"strings"
+	"runtime"
+
+	"lol-teammate-helper/internal/config"
+	"lol-teammate-helper/internal/connector"
+	"lol-teammate-helper/internal/diag"
+	"lol-teammate-helper/internal/dispatch"
+	"lol-teammate-helper/internal/logging"
+	"lol-teammate-helper/internal/service"
+	"lol-teammate-helper/internal/types"
 )
 
 const (
@@ -28,72 +30,54 @@ type App struct {
 }
 
 func NewApp() *App {
-	port, token, region, err := detectRiotCredentials()
-	if err != nil {
-		fmt.Printf("[app.NewApp] failed to detect Riot credentials: %v\n", err)
-	} else {
-		if config.InitInstance(port, token, region) {
-			if cfg, ok := config.Instance(); ok {
-				go connector.Connection(cfg.Port, cfg.Token)
-			}
-		}
-		fmt.Printf("[app.NewApp] detected Riot client on port %d (region %s)\n", port, region)
-	}
-
 	return &App{}
 }
+
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	dispatch.SetRuntimeContext(ctx)
+	go connector.Run(ctx)
 }
 
-func (a *App) Greet(name string) types.IPlayerBaseData {
-	const logPrefix = "[app.Greet]"
-
+// GetCurrentSummoner returns the logged-in summoner's profile, or an empty
+// payload while the League client has not been detected yet.
+func (a *App) GetCurrentSummoner() types.IPlayerBaseData {
 	cfg, ok := config.Instance()
 	if !ok {
-		fmt.Println(logPrefix + " config not initialised; returning empty payload")
 		return types.IPlayerBaseData{}
 	}
 
 	resp, err := cfg.SendHttpRequest(summonerEndpoint, http.MethodGet)
 	if err != nil {
-		fmt.Printf("%s request failed: %v\n", logPrefix, err)
+		slog.Warn("fetch current summoner failed", "err", err)
 		return types.IPlayerBaseData{}
 	}
 
-	fmt.Printf("%s received %d bytes of summoner data\n", logPrefix, len(resp))
 	var baseData types.IPlayerBaseData
 	if err := json.Unmarshal(resp, &baseData); err != nil {
-		fmt.Printf("%s unmarshal failed: %v\n", logPrefix, err)
+		slog.Warn("decode current summoner failed", "err", err)
 		return types.IPlayerBaseData{}
 	}
 	baseData.Region = cfg.Region
 	return baseData
 }
 
+// GetImgSrc returns a profile icon as a data URI.
 func (a *App) GetImgSrc(iconID int) string {
-	const logPrefix = "[app.GetImgSrc]"
-
 	cfg, ok := config.Instance()
 	if !ok {
-		fmt.Println(logPrefix + " config not initialised; returning empty result")
 		return ""
 	}
 
-	icon := iconID
-	if icon <= 0 {
-		icon = defaultProfileIconID
+	if iconID <= 0 {
+		iconID = defaultProfileIconID
 	}
 
-	path := fmt.Sprintf(profileIconPathTemplate, icon)
-	resp, err := cfg.SendHttpRequest(path, http.MethodGet)
+	resp, err := cfg.SendHttpRequest(profileIconURL(iconID), http.MethodGet)
 	if err != nil {
-		fmt.Printf("%s failed to request icon %d: %v\n", logPrefix, icon, err)
+		slog.Warn("fetch profile icon failed", "icon", iconID, "err", err)
 		return ""
 	}
-
-	fmt.Printf("%s received %d bytes for icon %d\n", logPrefix, len(resp), icon)
 	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(resp)
 }
 
@@ -103,69 +87,54 @@ func (a *App) GetCurrentChampSelectSnapshot() types.ChampSelectSnapshot {
 	if !ok {
 		return types.ChampSelectSnapshot{}
 	}
-
 	return snapshot
 }
 
-func detectRiotCredentials() (int, string, string, error) {
-	cmd := exec.Command("wmic", "PROCESS", "WHERE", "name='LeagueClientUx.exe'", "GET", "commandline")
-	output, err := cmd.Output()
-	if err != nil {
-		return 0, "", "", err
-	}
-
-	text := strings.ReplaceAll(string(output), "\r", "\n")
-
-	port, err := extractPort(text)
-	if err != nil {
-		return 0, "", "", err
-	}
-
-	token, err := extractToken(text)
-	if err != nil {
-		return 0, "", "", err
-	}
-
-	region, err := extractRegion(text)
-	if err != nil {
-		return 0, "", "", err
-	}
-
-	fmt.Printf("[app.detectRiotCredentials] detected port %d (token length %d, region %s)\n", port, len(token), region)
-	return port, token, region, nil
+func profileIconURL(id int) string {
+	return fmt.Sprintf(profileIconPathTemplate, id)
 }
 
-func extractPort(text string) (int, error) {
-	re := regexp.MustCompile(`(?i)--app-port[=\s]+(\d+)`)
-	match := re.FindStringSubmatch(text)
-	if len(match) != 2 {
-		return 0, errors.New("app port not found")
+// GetMyCareer analyses the logged-in summoner's own recent ranked games.
+func (a *App) GetMyCareer() types.TeamMemberSummary {
+	me, ok := dispatch.BuildSelf()
+	if !ok {
+		return types.TeamMemberSummary{}
 	}
-
-	port, err := strconv.Atoi(match[1])
-	if err != nil {
-		return 0, fmt.Errorf("invalid port value: %w", err)
-	}
-
-	return port, nil
+	return me
 }
 
-func extractToken(text string) (string, error) {
-	re := regexp.MustCompile(`(?i)--remoting-auth-token[=\s]+([\w-]+)`)
-	match := re.FindStringSubmatch(text)
-	if len(match) != 2 {
-		return "", errors.New("auth token not found")
-	}
-
-	return strings.TrimSpace(match[1]), nil
+// GetRankEmblem returns the client's own emblem image for a tier ("" if unavailable).
+func (a *App) GetRankEmblem(tierKey string) string {
+	return service.Shared().GetAsset(service.RankEmblemCandidates(tierKey))
 }
 
-func extractRegion(text string) (string, error) {
-	re := regexp.MustCompile(`(?i)--rso_platform_id[=\s]+([\w-]+)`)
-	match := re.FindStringSubmatch(text)
-	if len(match) != 2 {
-		return "", errors.New("platform id not found")
+// GetPositionIcon returns the client's own lane icon ("" if unavailable).
+func (a *App) GetPositionIcon(position string) string {
+	if position == "" {
+		return ""
 	}
+	return service.Shared().GetAsset(service.PositionIconCandidates(position))
+}
 
-	return strings.TrimSpace(match[1]), nil
+// GetDiagnostics returns connection state and the most recent raw events.
+func (a *App) GetDiagnostics() diag.Snapshot {
+	return diag.Get()
+}
+
+// OpenLogDir opens the folder containing the log file in the file manager.
+func (a *App) OpenLogDir() {
+	dir := logging.Dir()
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", dir)
+	case "darwin":
+		cmd = exec.Command("open", dir)
+	default:
+		cmd = exec.Command("xdg-open", dir)
+	}
+	// explorer reports a non-zero exit code even on success, so only start it.
+	if err := cmd.Start(); err != nil {
+		slog.Warn("open log dir failed", "dir", dir, "err", err)
+	}
 }

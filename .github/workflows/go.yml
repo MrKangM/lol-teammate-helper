@@ -46,7 +46,7 @@ jobs:
       if: steps.check_frontend.outputs.frontend_exists == 'true'
       uses: actions/setup-node@v4
       with:
-        node-version: '23'
+        node-version: '22'
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
 
@@ -66,9 +66,9 @@ jobs:
         npm ci  # 使用 ci 而不是 install 以获得更可靠的构建
         npm run build
 
-    # Go 构建和测试
-    - name: Build
-      run: go build -v ./...
+    # Go 构建和测试（根包依赖 Wails 的 GTK/WebKit，仅检查 internal 包）
+    - name: Vet
+      run: go vet ./internal/...
 
     - name: Test
-      run: go test -v ./...
+      run: go test -race ./internal/...

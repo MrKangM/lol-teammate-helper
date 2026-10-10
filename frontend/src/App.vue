@@ -1,283 +1,71 @@
-﻿<script lang="ts">
-export const description = "A sidebar that collapses to icons."
-export const iframeHeight = "800px"
-export const containerClass = "w-full h-full"
-</script>
-
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue"
-import AppSidebar from "@/components/AppSidebar.vue"
-import HelloWorld from "@/components/HelloWorld.vue"
-import CurrentBp from "@/components/CurrentBp.vue"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { GetImgSrc, Greet } from "../wailsjs/go/main/App"
-import { IPlayerBaseData } from "@/interface/baseData"
-import { GetPlayerRankData } from "../wailsjs/go/controller/PlayerController"
-import type { IRankedStats } from "@/interface/rankData"
+import { computed, onMounted, ref } from "vue"
+import { Activity, Swords, UserRound } from "lucide-vue-next"
+import { PHASE_LABELS } from "@/lib/format"
+import { startStore, status, summoner, summonerIcon } from "@/lib/store"
+import CareerView from "@/views/CareerView.vue"
+import DiagnosticsView from "@/views/DiagnosticsView.vue"
+import LiveView from "@/views/LiveView.vue"
 
-const playerData = ref<IPlayerBaseData | null>(null)
-const rankData = ref<IRankedStats>()
-const activePanel = ref<"dashboard" | "helloWorld" | "currentBp">("dashboard")
-const isLoading = ref(true)
-const retryTimer = ref<number | null>(null)
-const retryCount = ref(0)
+type Page = "live" | "career" | "diagnostics"
 
-const hasPlayerData = computed(() => playerData.value !== null)
-const showClientPrompt = computed(() => isLoading.value || !hasPlayerData.value)
+const page = ref<Page>("live")
 
-const RETRY_DELAY_MS = 2000
-const overlayTitle = "请打开游戏客户端后再启动本软件"
-const overlaySubtitle = "正在尝试获取召唤师资料，请确认英雄联盟客户端已登录"
-const overlayRetryPrefix = "已尝试重新连接"
-const overlayRetrySuffix = "次，将继续自动重试"
+const nav = [
+  { id: "live" as Page, label: "对局分析", icon: Swords },
+  { id: "career" as Page, label: "我的生涯", icon: UserRound },
+  { id: "diagnostics" as Page, label: "诊断", icon: Activity },
+]
 
-onMounted(() => {
-  loadPlayerData()
-})
+const phaseLabel = computed(() => PHASE_LABELS[status.value?.phase ?? ""] ?? "")
 
-onBeforeUnmount(() => {
-  if (retryTimer.value !== null) {
-    clearTimeout(retryTimer.value)
-    retryTimer.value = null
-  }
-})
-
-async function waitForBackendBridge(maxAttempts = 50, delay = 100) {
-  let attempts = 0
-  while (!(globalThis as any).go?.main?.App) {
-    if (attempts >= maxAttempts) {
-      return false
-    }
-    await new Promise((resolve) => setTimeout(resolve, delay))
-    attempts += 1
-  }
-  return true
+const goto = (next: string) => {
+  page.value = next as Page
 }
 
-const parsePlayerData = (raw: unknown): Partial<IPlayerBaseData> => {
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw) as Partial<IPlayerBaseData>
-    } catch (error) {
-      console.warn("failed to parse player data", error)
-      return {}
-    }
-  }
-
-  if (typeof raw === "object" && raw !== null) {
-    return raw as Partial<IPlayerBaseData>
-  }
-
-  return {}
-}
-
-function scheduleReload() {
-  if (retryTimer.value !== null) {
-    clearTimeout(retryTimer.value)
-  }
-
-  retryTimer.value = window.setTimeout(() => {
-    retryCount.value += 1
-    loadPlayerData()
-  }, RETRY_DELAY_MS)
-}
-
-async function loadPlayerData() {
-  isLoading.value = true
-
-  try {
-    const bridgeReady = await waitForBackendBridge()
-    if (!bridgeReady) {
-      console.warn("backend bridge unavailable; run wails dev or start the packaged app.")
-      scheduleReload()
-      return
-    }
-
-    let baseData: IPlayerBaseData
-    try {
-      baseData = await Greet("load-player")
-    } catch (requestError) {
-      console.error("failed to fetch summoner data", requestError)
-      scheduleReload()
-      return
-    }
-
-    // const parsedBaseData = rawBaseData
-    // const hasBaseData = Object.keys(parsedBaseData).length > 0
-
-    // if (!hasBaseData) {
-    //   console.warn("player data unavailable; waiting for League client")
-    //   scheduleReload()
-    //   return
-    // }
-
-     // baseData = parsedBaseData as IplayerBaseData
-    let iconImgSrc: string | undefined
-    const profileIconId = typeof baseData.profileIconId === "number" ? baseData.profileIconId : undefined
-
-    try {
-      const iconIdForRequest = profileIconId ?? 0
-      const iconResponse = await GetImgSrc(iconIdForRequest)
-      if (typeof iconResponse === "string" && iconResponse.startsWith("data:image")) {
-        iconImgSrc = iconResponse
-      }
-    } catch (iconError) {
-      console.error("failed to fetch profile icon", iconError)
-    }
-
-    playerData.value = {
-      ...baseData,
-      iconImgSrc,
-    }
-
-    const puuid = playerData.value?.puuid ?? ""
-
-    if (puuid.length > 0) {
-      try {
-        rankData.value = await GetPlayerRankData(puuid)
-        console.log(`API获取的排位数据:${JSON.stringify(rankData)}`)
-      } catch (rankError) {
-        console.error("failed to fetch player rank data", rankError)
-      }
-    } else {
-      rankData.value = undefined
-      console.warn("missing puuid for rank data")
-    }
-    if (retryTimer.value !== null) {
-      clearTimeout(retryTimer.value)
-      retryTimer.value = null
-    }
-
-    retryCount.value = 0
-    isLoading.value = false
-  } catch (error) {
-    console.error("failed to initialise player data", error)
-    playerData.value = null
-    rankData.value = undefined
-    scheduleReload()
-  }
-}
-
-type SidebarNavigatePayload = {
-  parent: {
-    title: string
-    url: string
-  }
-  item: {
-    title: string
-    url: string
-  }
-}
-
-const handleSidebarNavigate = (payload: SidebarNavigatePayload) => {
-  if (payload.item.url === "hello-world") {
-    activePanel.value = "helloWorld"
-  } else if (payload.item.url === "current-bp") {
-    activePanel.value = "currentBp"
-  } else {
-    activePanel.value = "dashboard"
-  }
-}
+onMounted(startStore)
 </script>
 
 <template>
-  <div class="relative h-full w-full">
-    <div
-      v-if="showClientPrompt"
-      class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/95 px-6 text-center backdrop-blur-sm"
-    >
-      <div class="flex flex-col items-center gap-4">
-        <div
-          class="h-14 w-14 animate-spin rounded-full border-4 border-muted-foreground/40 border-t-primary"
-          aria-hidden="true"
-        />
-        <div class="space-y-2">
-          <p class="text-xl font-semibold text-foreground">
-            {{ overlayTitle }}
-          </p>
-          <p class="text-sm text-muted-foreground">
-            {{ overlaySubtitle }}
-          </p>
-          <p v-if="retryCount > 0" class="text-xs text-muted-foreground/70">
-            {{ overlayRetryPrefix }} {{ retryCount }} {{ overlayRetrySuffix }}
-          </p>
+  <div class="flex h-full flex-col">
+    <header class="flex h-14 shrink-0 items-center gap-6 border-b border-line bg-panel px-5">
+      <div class="flex items-center gap-2.5">
+        <div class="grid size-8 place-items-center overflow-hidden rounded-lg bg-accent text-sm font-black text-bg">
+          <img v-if="summonerIcon" :src="summonerIcon" alt="" class="size-full object-cover" />
+          <span v-else>LH</span>
         </div>
+        <span class="text-sm font-semibold text-ink">队友助手</span>
       </div>
-    </div>
 
-    <SidebarProvider v-else :default-open="true">
-      <AppSidebar
-        :avatar-src="playerData?.iconImgSrc"
-        :player-data="playerData ?? undefined"
-        :rank-data="rankData"
-        @navigate="handleSidebarNavigate"
-      />
-      <SidebarInset>
-        <header
-          class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12"
+      <nav class="flex h-full items-stretch gap-1">
+        <button
+          v-for="item in nav"
+          :key="item.id"
+          type="button"
+          class="relative flex items-center gap-2 px-3 text-[13px] transition-colors"
+          :class="page === item.id ? 'font-semibold text-ink' : 'text-muted hover:text-ink'"
+          @click="page = item.id"
         >
-          <div class="flex items-center gap-2 px-4">
-            <SidebarTrigger class="-ml-1" />
-            <Separator orientation="vertical" class="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem class="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Building Your Application
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator class="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </header>
-        <div class="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <template v-if="activePanel === 'helloWorld'">
-            <HelloWorld :player-data="playerData" :rank-data="rankData" />
-          </template>
-          <template v-else-if="activePanel === 'currentBp'">
-            <CurrentBp />
-          </template>
-          <template v-else>
-            <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-              <div class="aspect-video rounded-xl bg-muted/50" />
-              <div class="aspect-video rounded-xl bg-muted/50" />
-              <div class="aspect-video rounded-xl bg-muted/50" />
-            </div>
-            <div class="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
-          </template>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+          <component :is="item.icon" class="size-4" />
+          {{ item.label }}
+          <span v-if="page === item.id" class="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-accent" />
+        </button>
+      </nav>
+
+      <div class="ml-auto flex items-center gap-3 text-xs">
+        <span v-if="summoner?.gameName" class="text-muted">{{ summoner.gameName }}</span>
+        <span v-if="status?.connected && phaseLabel" class="rounded bg-panel-3 px-2 py-0.5 text-ink">{{ phaseLabel }}</span>
+        <span class="flex items-center gap-1.5 rounded-full bg-panel-2 px-2.5 py-1" :class="status?.connected ? 'text-good' : 'text-loss'">
+          <span class="size-1.5 rounded-full" :class="status?.connected ? 'bg-good' : 'bg-loss'" />
+          {{ status?.connected ? "客户端已连接" : "未连接" }}
+        </span>
+      </div>
+    </header>
+
+    <main class="min-h-0 flex-1 overflow-y-auto p-5">
+      <LiveView v-show="page === 'live'" @goto="goto" />
+      <CareerView v-if="page === 'career'" />
+      <DiagnosticsView v-if="page === 'diagnostics'" />
+    </main>
   </div>
 </template>
-
-
-
-
-
-
-
-
-
-
-
-
-
-

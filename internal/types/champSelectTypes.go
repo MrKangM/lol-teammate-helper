@@ -33,7 +33,7 @@ type ChampSelectData struct {
 	//RerollsRemaining                        int            `json:"rerollsRemaining"`                        // 剩余重新随机次数
 	//ShowQuitButton                          bool           `json:"showQuitButton"`                          // 是否显示退出按钮
 	//SkipChampionSelect                      bool           `json:"skipChampionSelect"`                      // 是否跳过英雄选择
-	//TheirTeam                               []Player       `json:"theirTeam"`                               // 敌方队伍玩家列表
+	TheirTeam []Player `json:"theirTeam"` // 敌方队伍玩家列表（排位选人阶段通常不含 puuid）
 	//Timer                                   Timer          `json:"timer"`                                   // 计时器信息
 	//Trades                                  []Trade        `json:"trades"`                                  // 英雄交换信息
 }

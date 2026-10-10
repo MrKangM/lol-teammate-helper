@@ -3,7 +3,7 @@ package dispatch
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"sort"
 	"sync"
 	"time"
@@ -14,12 +14,10 @@ import (
 	"lol-teammate-helper/internal/types"
 )
 
-const maxRecentMatches = 5
-
 var (
 	runtimeCtx      context.Context
 	runtimeCtxMu    sync.RWMutex
-	matchHistorySvc = service.NewMatchHistoryService()
+	matchHistorySvc = service.Shared()
 )
 
 // SetRuntimeContext allows the Wails runtime context to be reused when emitting events.
@@ -35,148 +33,94 @@ func getRuntimeContext() context.Context {
 	return runtimeCtx
 }
 
-// EventHandler routes websocket events based on their URL.
-func EventHandler(url string, data json.RawMessage) {
-	fmt.Printf("Received event: %s\n", url)
-	switch url {
-	case "/lol-lobby/v2/lobby":
-		fmt.Println("Lobby event")
-	case "/lol-champ-select/v1/session":
+// Event names emitted to the frontend.
+const (
+	EventSnapshot = "champ-select:snapshot"
+	EventEnded    = "champ-select:ended"
+)
+
+// LCU resources routed by EventHandler.
+const (
+	ChampSelectURI = "/lol-champ-select/v1/session"
+	GameflowURI    = "/lol-gameflow/v1/session"
+)
+
+// EventHandler routes websocket events based on their URL. It must be called
+// from a single goroutine: handlers read-modify-write the shared snapshot.
+func EventHandler(uri string, eventType string, data json.RawMessage) {
+	switch uri {
+	case ChampSelectURI:
+		if eventType == "Delete" {
+			return // the gameflow phase decides when the snapshot is cleared
+		}
 		handleChampSelectEvent(data)
+	case GameflowURI:
+		if eventType == "Delete" {
+			handleSessionEnded()
+			return
+		}
+		handleGameflowEvent(data)
 	default:
-		fmt.Println("[EVENT DISPATCHER] unhandled event, event:" + url)
+		slog.Debug("unhandled event", "uri", uri)
+	}
+}
+
+func emit(name string, payload ...interface{}) {
+	if ctx := getRuntimeContext(); ctx != nil {
+		runtime.EventsEmit(ctx, name, payload...)
+	}
+}
+
+func handleSessionEnded() {
+	ClearChampSelectSnapshot()
+	emit(EventEnded)
+}
+
+// publish stores the snapshot and notifies the UI when something changed.
+func publish(snapshot types.ChampSelectSnapshot) {
+	snapshot.UpdatedAt = time.Now()
+	if StoreChampSelectSnapshot(snapshot) {
+		slog.Info("snapshot published", "phase", snapshot.Phase, "queue", snapshot.QueueID,
+			"team", len(snapshot.Team), "enemy", len(snapshot.Enemy))
+		emit(EventSnapshot, snapshot)
 	}
 }
 
 func handleChampSelectEvent(data json.RawMessage) {
-	var champSelect types.ChampSelectData
-	if err := json.Unmarshal(data, &champSelect); err != nil {
-		fmt.Printf("Failed to decode champion select payload: %v\n", err)
+	var cs types.ChampSelectData
+	if err := json.Unmarshal(data, &cs); err != nil {
+		slog.Warn("decode champ select payload failed", "err", err)
 		return
 	}
 
-	var (
-		wg        sync.WaitGroup
-		summaries = make([]types.TeamMemberSummary, 0, len(champSelect.MyTeam))
-		mu        sync.Mutex
-	)
-
-	for _, player := range champSelect.MyTeam {
-		playerCopy := player
-
-		wg.Add(1)
-		go func(p types.Player) {
-			defer wg.Done()
-
-			summary := buildTeamMemberSummary(p)
-
-			mu.Lock()
-			summaries = append(summaries, summary)
-			mu.Unlock()
-
-		}(playerCopy)
+	own := make([]memberInput, len(cs.MyTeam))
+	for i, p := range cs.MyTeam {
+		own[i] = inputFromPlayer(p)
 	}
+	team := buildMembers(own)
+	sortByCell(team)
 
-	wg.Wait()
-
-	sort.SliceStable(summaries, func(i, j int) bool {
-		return summaries[i].CellID < summaries[j].CellID
-	})
+	// Ranked champ select hides the opposing puuids; custom/normal modes may not.
+	var enemyInputs []memberInput
+	for _, p := range cs.TheirTeam {
+		if p.Puuid != "" {
+			enemyInputs = append(enemyInputs, inputFromPlayer(p))
+		}
+	}
 
 	snapshot := types.ChampSelectSnapshot{
-		QueueID:   champSelect.QueueID,
-		GameID:    champSelect.GameID,
-		UpdatedAt: time.Now(),
-		Team:      summaries,
+		QueueID: cs.QueueID,
+		GameID:  cs.GameID,
+		Phase:   "ChampSelect",
+		Team:    team,
 	}
-
-	if ctx := getRuntimeContext(); ctx != nil {
-		runtime.EventsEmit(ctx, "champ-select:snapshot", snapshot)
-	} else {
-		fmt.Println("[dispatch.handleChampSelectEvent] runtime context is not set; skipping emit")
+	if len(enemyInputs) > 0 {
+		snapshot.Enemy = buildMembers(enemyInputs)
+		sortByCell(snapshot.Enemy)
 	}
-
-	StoreChampSelectSnapshot(snapshot)
+	publish(snapshot)
 }
 
-func buildTeamMemberSummary(player types.Player) types.TeamMemberSummary {
-	summary := types.TeamMemberSummary{
-		Puuid:            player.Puuid,
-		GameName:         player.GameName,
-		TagLine:          player.TagLine,
-		AssignedPosition: player.AssignedPosition,
-		ChampionID:       player.ChampionID,
-		CellID:           player.CellID,
-	}
-
-	if player.Puuid == "" {
-		return summary
-	}
-
-	matchData, err := service.GetTeammateMatchDetails(player.Puuid)
-	if err != nil {
-		fmt.Printf("[dispatch.buildTeamMemberSummary] failed to fetch match data: %v\n", err)
-		return summary
-	}
-
-	summary.RecentMatches = buildRecentMatches(matchData.History, matchData.Heroes)
-	if player.ChampionID > 0 && matchHistorySvc != nil {
-		heroInfo, heroErr := matchHistorySvc.GetMatchHistoryNameAndIconByHeroId(player.ChampionID)
-		if heroErr != nil {
-			fmt.Printf("%s failed to fetch current hero %d: %v\n", "[dispatch.buildTeamMemberSummary]", player.ChampionID, heroErr)
-		} else {
-			summary.ChampionName = heroInfo.Name
-			icon := heroInfo.IconDataURI
-			if icon == "" {
-				icon = heroInfo.SquarePortraitPath
-			}
-			summary.ChampionIcon = icon
-		}
-	}
-	if summary.ChampionName == "" && player.ChampionID > 0 {
-		summary.ChampionName = fmt.Sprintf("Champion %d", player.ChampionID)
-	}
-
-	return summary
-}
-func buildRecentMatches(history types.MatchHistory, heroMap map[int]types.HeroInfo) []types.RecentMatchSummary {
-	games := history.Games.Games
-	if len(games) == 0 {
-		return nil
-	}
-
-	result := make([]types.RecentMatchSummary, 0, maxRecentMatches)
-	for _, game := range games {
-		if len(game.Participants) == 0 {
-			continue
-		}
-
-		participant := game.Participants[0]
-		stats := participant.Stats
-		heroInfo := heroMap[participant.ChampionID]
-
-		icon := heroInfo.IconDataURI
-		if icon == "" {
-			icon = heroInfo.SquarePortraitPath
-		}
-
-		matchSummary := types.RecentMatchSummary{
-			ChampionID:   participant.ChampionID,
-			ChampionName: heroInfo.Name,
-			ChampionIcon: icon,
-			Win:          stats.Win,
-			Kills:        stats.Kills,
-			Deaths:       stats.Deaths,
-			Assists:      stats.Assists,
-			QueueID:      game.QueueID,
-			GameDuration: game.GameDuration,
-		}
-
-		result = append(result, matchSummary)
-		if len(result) >= maxRecentMatches {
-			break
-		}
-	}
-
-	return result
+func sortByCell(members []types.TeamMemberSummary) {
+	sort.SliceStable(members, func(i, j int) bool { return members[i].CellID < members[j].CellID })
 }
