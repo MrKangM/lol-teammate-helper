@@ -40,23 +40,30 @@ const toggle = async (gameId: number) => {
     <div v-for="m in matches" :key="m.gameId">
       <button
         type="button"
-        class="grid w-full grid-cols-[4px_30px_minmax(110px,1fr)_88px_58px_minmax(96px,auto)_minmax(104px,auto)_64px] items-center gap-2.5 overflow-hidden rounded-sm bg-panel-2/70 py-1.5 pr-3 text-left text-xs transition-colors hover:bg-panel-3"
+        class="grid w-full grid-cols-[4px_34px_minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-md py-1.5 pr-3 text-left text-xs transition-colors hover:brightness-125"
+        :class="m.win ? 'bg-win-bg' : 'bg-loss-bg'"
         @click="toggle(m.gameId)"
       >
-        <span class="h-full min-h-8 w-1" :class="m.win ? 'bg-win' : 'bg-loss'" />
-        <img v-if="m.championIcon" :src="m.championIcon" :alt="m.championName" class="size-[30px] rounded" />
-        <div v-else class="size-[30px] rounded bg-panel-3" />
+        <span class="h-full min-h-9 w-1" :class="m.win ? 'bg-win' : 'bg-loss'" />
+        <img v-if="m.championIcon" :src="m.championIcon" :alt="m.championName" class="size-[34px] rounded-md" />
+        <div v-else class="size-[34px] rounded-md bg-panel-3" />
 
-        <span class="truncate text-ink">
-          <b :class="m.win ? 'text-win' : 'text-loss'">{{ m.win ? "胜" : "负" }}</b>
-          {{ m.championName || `英雄${m.championId}` }}
-          <span class="text-muted">· {{ positionLabel(m.position) }}</span>
-        </span>
-        <span class="num font-semibold text-gold-bright">{{ formatKda(m.kills, m.deaths, m.assists) }}</span>
-        <span class="num text-muted">{{ kdaRatio(m.kills, m.deaths, m.assists) }} KDA</span>
-        <span class="num whitespace-nowrap text-muted">补刀 {{ m.cs }} · 伤害 {{ compactNumber(m.damage) }}</span>
-        <span class="whitespace-nowrap text-muted">{{ queueLabel(m.queueId) }} {{ formatDuration(m.gameDuration) }}</span>
-        <span class="text-right text-muted">{{ timeAgo(m.gameCreation) }}</span>
+        <div class="min-w-0 leading-tight">
+          <p class="truncate font-semibold text-ink">{{ m.championName || `英雄${m.championId}` }}</p>
+          <p class="truncate text-muted">{{ queueLabel(m.queueId) }} · {{ positionLabel(m.position) }}</p>
+        </div>
+        <div class="leading-tight">
+          <p class="num font-semibold text-ink">{{ formatKda(m.kills, m.deaths, m.assists) }}</p>
+          <p class="num text-muted">{{ kdaRatio(m.kills, m.deaths, m.assists) }} KDA</p>
+        </div>
+        <p class="num whitespace-nowrap leading-tight text-muted">
+          补刀 {{ m.cs }}<br />
+          伤害 {{ compactNumber(m.damage) }}
+        </p>
+        <div class="text-right leading-tight">
+          <p class="font-semibold" :class="m.win ? 'text-win' : 'text-loss'">{{ m.win ? "胜利" : "失败" }}</p>
+          <p class="num whitespace-nowrap text-muted">{{ formatDuration(m.gameDuration) }} · {{ timeAgo(m.gameCreation) }}</p>
+        </div>
       </button>
 
       <div v-if="openGameId === m.gameId" class="py-2">

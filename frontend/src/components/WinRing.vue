@@ -7,7 +7,7 @@ const stroke = 7
 const radius = computed(() => (props.size - stroke) / 2)
 const circumference = computed(() => 2 * Math.PI * radius.value)
 const dash = computed(() => `${(Math.min(Math.max(props.rate, 0), 100) / 100) * circumference.value} ${circumference.value}`)
-const color = computed(() => (props.rate >= 55 ? "var(--color-win)" : props.rate >= 48 ? "var(--color-gold)" : "var(--color-loss)"))
+const color = computed(() => (props.rate >= 52 ? "var(--color-win)" : "var(--color-loss)"))
 </script>
 
 <template>
@@ -26,7 +26,7 @@ const color = computed(() => (props.rate >= 55 ? "var(--color-win)" : props.rate
       />
     </svg>
     <div class="absolute inset-0 flex flex-col items-center justify-center leading-tight">
-      <span class="num text-lg font-bold text-gold-bright">{{ Math.round(rate) }}%</span>
+      <span class="num text-lg font-bold text-ink">{{ Math.round(rate) }}%</span>
       <span class="text-[10px] text-muted">{{ label }}</span>
     </div>
   </div>

@@ -1,26 +1,22 @@
 @import "tailwindcss";
 
-/* Hextech-inspired palette: deep navy surfaces, gold accents, teal for wins. */
+/* Neutral charcoal surfaces, blue/red for win/loss, one accent. */
 @theme {
-  --color-bg: #010a13;
-  --color-panel: #091428;
-  --color-panel-2: #0e1d35;
-  --color-panel-3: #14263f;
-  --color-line: #1f3047;
-  --color-line-gold: #5c4a24;
-  --color-gold: #c8aa6e;
-  --color-gold-bright: #f0e6d2;
-  --color-gold-dim: #8a6f3a;
-  --color-ink: #e9e2d0;
-  --color-muted: #8f9aa8;
-  --color-teal: #0ac8b9;
-  --color-win: #2fcfae;
+  --color-bg: #0d0f14;
+  --color-panel: #151821;
+  --color-panel-2: #1a1e29;
+  --color-panel-3: #232838;
+  --color-line: #272c3a;
+  --color-ink: #e8eaf0;
+  --color-muted: #8a92a5;
+  --color-accent: #6d8dff;
+  --color-win: #5383e8;
+  --color-win-bg: #232e48;
   --color-loss: #e84057;
-  --color-horse-top: #f2b84b;
-  --color-horse-good: #2fcfae;
-  --color-horse-mid: #6c8cd5;
-  --color-horse-low: #e84057;
-  --font-sans: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --color-loss-bg: #3a2530;
+  --color-gold: #f2b84b;
+  --color-good: #35c58b;
+  --font-sans: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
 }
 
 @layer base {
@@ -31,10 +27,7 @@
   }
   body {
     margin: 0;
-    background:
-      radial-gradient(1200px 500px at 70% -10%, rgb(200 170 110 / 0.08), transparent 60%),
-      radial-gradient(900px 500px at 0% 100%, rgb(10 200 185 / 0.05), transparent 60%),
-      var(--color-bg);
+    background: var(--color-bg);
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: 14px;
@@ -47,40 +40,30 @@
     cursor: not-allowed;
   }
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-line);
-    border-radius: 8px;
+    background: var(--color-panel-3);
+    border-radius: 10px;
+    border: 2px solid var(--color-bg);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-line-gold);
+    background: #313850;
   }
 }
 
 @layer components {
-  .panel {
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.025), transparent 40%), var(--color-panel);
+  .card {
+    background: var(--color-panel);
     border: 1px solid var(--color-line);
-    border-radius: 6px;
+    border-radius: 10px;
   }
-  .panel-gold {
-    border-color: var(--color-line-gold);
-  }
-  .eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--color-gold-dim);
-  }
-  .title-gold {
-    background: linear-gradient(180deg, var(--color-gold-bright), var(--color-gold));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-muted);
+    letter-spacing: 0.02em;
   }
   .btn {
     display: inline-flex;
@@ -88,15 +71,15 @@
     gap: 6px;
     padding: 6px 12px;
     font-size: 12px;
-    color: var(--color-gold);
+    color: var(--color-ink);
     background: var(--color-panel-2);
-    border: 1px solid var(--color-line-gold);
-    border-radius: 4px;
-    transition: background 0.15s, color 0.15s;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    transition: background 0.15s, border-color 0.15s;
   }
   .btn:hover:not(:disabled) {
     background: var(--color-panel-3);
-    color: var(--color-gold-bright);
+    border-color: #38405a;
   }
   .btn:disabled {
     opacity: 0.5;

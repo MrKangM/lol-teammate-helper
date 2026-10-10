@@ -11,12 +11,12 @@ const damageWidth = (damage: number) => `${Math.round(((damage ?? 0) / maxDamage
 </script>
 
 <template>
-  <div class="space-y-3 rounded-md border border-line bg-bg/60 p-3">
+  <div class="space-y-3 rounded-lg border border-line bg-bg/70 p-3">
     <p class="text-xs text-muted">{{ queueLabel(detail.queueId) }} · 用时 {{ formatDuration(detail.gameDuration) }}</p>
 
     <section v-for="team in teams" :key="team.teamId" class="space-y-1">
       <header class="flex items-center gap-3 text-xs">
-        <span class="rounded-sm px-1.5 py-0.5 font-semibold" :class="team.win ? 'bg-win/20 text-win' : 'bg-loss/20 text-loss'">
+        <span class="rounded-sm px-1.5 py-0.5 font-semibold" :class="team.win ? 'bg-win-bg text-win' : 'bg-loss-bg text-loss'">
           {{ team.win ? "胜利" : "失败" }}
         </span>
         <span class="text-muted">击杀 {{ team.kills }} · 经济 {{ compactNumber(team.gold) }}</span>
@@ -26,7 +26,7 @@ const damageWidth = (damage: number) => `${Math.round(((damage ?? 0) / maxDamage
         v-for="p in team.players"
         :key="p.puuid || p.name"
         class="grid grid-cols-[30px_44px_minmax(120px,1.2fr)_84px_minmax(80px,1fr)_62px_auto] items-center gap-2 rounded px-1.5 py-1 text-xs"
-        :class="p.isTarget ? 'bg-gold/10 ring-1 ring-gold/40' : 'hover:bg-panel-2'"
+        :class="p.isTarget ? 'bg-accent/10 ring-1 ring-accent/50' : 'hover:bg-panel-2'"
       >
         <img v-if="p.championIcon" :src="p.championIcon" :alt="p.championName" class="size-[30px] rounded" />
         <div v-else class="size-[30px] rounded bg-panel-3" />
@@ -43,11 +43,11 @@ const damageWidth = (damage: number) => `${Math.round(((damage ?? 0) / maxDamage
           <p class="truncate text-muted">{{ p.championName }} · Lv{{ p.level }}</p>
         </div>
 
-        <p class="num font-semibold text-gold-bright">{{ formatKda(p.kills, p.deaths, p.assists) }}</p>
+        <p class="num font-semibold text-ink">{{ formatKda(p.kills, p.deaths, p.assists) }}</p>
 
         <div>
           <div class="h-1.5 overflow-hidden rounded bg-panel-3">
-            <div class="h-full bg-gold" :style="{ width: damageWidth(p.damage) }" />
+            <div class="h-full bg-accent" :style="{ width: damageWidth(p.damage) }" />
           </div>
           <p class="num mt-0.5 text-muted">伤害 {{ compactNumber(p.damage) }}</p>
         </div>

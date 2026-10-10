@@ -49,8 +49,8 @@ const copy = async () => {
 
 <template>
   <div class="space-y-4">
-    <section class="panel p-4">
-      <p class="eyebrow mb-3">连接状态</p>
+    <section class="card p-4">
+      <p class="section-title mb-3">连接状态</p>
       <dl class="grid grid-cols-[110px_1fr] gap-y-2 text-sm">
         <dt class="text-muted">客户端</dt>
         <dd :class="status?.connected ? 'text-win' : 'text-loss'">{{ status?.connected ? "已连接" : "未连接" }}</dd>
@@ -72,11 +72,11 @@ const copy = async () => {
       <p class="mt-3 text-[11px] leading-5 text-muted">反馈问题时点“复制诊断信息”，把内容贴给开发者即可，里面包含最近收到的原始事件。内容含对局玩家的名字，请自行确认后再发送。</p>
     </section>
 
-    <section class="panel p-4">
-      <p class="eyebrow mb-3">最近收到的事件（最新在前）</p>
+    <section class="card p-4">
+      <p class="section-title mb-3">最近收到的事件（最新在前）</p>
       <p v-if="!events.length" class="py-6 text-center text-sm text-muted">还没有收到任何事件。进入房间、选人或游戏后会出现。</p>
       <div v-for="(e, i) in events" :key="i" class="border-b border-line/60 last:border-0">
-        <button type="button" class="flex w-full items-center gap-3 py-1.5 text-left text-xs hover:text-gold-bright" @click="openId = openId === i ? null : i">
+        <button type="button" class="flex w-full items-center gap-3 py-1.5 text-left text-xs hover:text-ink" @click="openId = openId === i ? null : i">
           <span class="num w-[68px] shrink-0 text-muted">{{ time(e.time) }}</span>
           <span class="truncate text-ink">{{ shortUri(e.uri) }}</span>
           <span class="rounded-sm border border-line px-1 text-muted">{{ e.type }}</span>

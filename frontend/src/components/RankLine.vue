@@ -5,7 +5,7 @@ import { formatPercent } from "@/lib/format"
 import RankEmblem from "@/components/RankEmblem.vue"
 
 const props = withDefaults(defineProps<{ rank: types.RankSummary; size?: number; showQueue?: boolean }>(), {
-  size: 40,
+  size: 36,
   showQueue: true,
 })
 
@@ -15,12 +15,12 @@ const total = computed(() => (props.rank?.wins ?? 0) + (props.rank?.losses ?? 0)
 </script>
 
 <template>
-  <div class="flex items-center gap-2">
-    <RankEmblem :tier-key="rank?.tierKey" :size="size" class="shrink-0" />
+  <div class="flex items-center gap-2.5">
+    <RankEmblem :tier-key="rank?.tierKey" :division="rank?.division" :size="size" class="shrink-0" />
     <div class="min-w-0 leading-tight">
-      <p class="truncate text-[13px] font-semibold" :class="ranked ? 'text-gold-bright' : 'text-muted'">
+      <p class="truncate text-[13px] font-semibold" :class="ranked ? 'text-ink' : 'text-muted'">
         {{ title }}
-        <span v-if="ranked" class="num text-[11px] font-normal text-muted">{{ rank.leaguePoints }} LP</span>
+        <span v-if="ranked" class="num ml-0.5 text-[11px] font-normal text-muted">{{ rank.leaguePoints }} LP</span>
       </p>
       <p class="num whitespace-nowrap text-[11px] text-muted">
         <template v-if="showQueue">{{ rank?.queueName }}</template>

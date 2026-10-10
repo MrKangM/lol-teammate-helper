@@ -57,12 +57,12 @@ export const timeAgo = (epochMs?: number, now: number = Date.now()) => {
   return `${Math.floor(days / 30)}个月前`
 }
 
-/** Text colour and badge style per rating label. */
-export const RATING_STYLES: Record<string, { badge: string; strip: string }> = {
-  大腿: { badge: "bg-horse-top/15 text-horse-top border-horse-top/50", strip: "bg-horse-top" },
-  上等马: { badge: "bg-horse-good/15 text-horse-good border-horse-good/50", strip: "bg-horse-good" },
-  中等马: { badge: "bg-horse-mid/15 text-horse-mid border-horse-mid/50", strip: "bg-horse-mid" },
-  下等马: { badge: "bg-horse-low/15 text-horse-low border-horse-low/50", strip: "bg-horse-low" },
+/** Badge and accent-bar style per rating label. */
+export const RATING_STYLES: Record<string, { badge: string; strip: string; text: string }> = {
+  大腿: { badge: "bg-gradient-to-br from-[#f7c85a] to-[#ee8a22] text-[#3a2200]", strip: "bg-gold", text: "text-gold" },
+  上等马: { badge: "bg-good text-[#06281b]", strip: "bg-good", text: "text-good" },
+  中等马: { badge: "bg-[#56627f] text-white", strip: "bg-[#56627f]", text: "text-[#8d9ab8]" },
+  下等马: { badge: "bg-loss text-white", strip: "bg-loss", text: "text-loss" },
 }
 
 export const PHASE_LABELS: Record<string, string> = {

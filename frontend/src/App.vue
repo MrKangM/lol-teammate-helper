@@ -12,11 +12,10 @@ type Page = "live" | "career" | "diagnostics"
 const page = ref<Page>("live")
 
 const nav = [
-  { id: "live" as Page, label: "对局", icon: Swords },
-  { id: "career" as Page, label: "生涯", icon: UserRound },
+  { id: "live" as Page, label: "对局分析", icon: Swords },
+  { id: "career" as Page, label: "我的生涯", icon: UserRound },
   { id: "diagnostics" as Page, label: "诊断", icon: Activity },
 ]
-const titles: Record<Page, string> = { live: "对局分析", career: "我的生涯", diagnostics: "诊断" }
 
 const phaseLabel = computed(() => PHASE_LABELS[status.value?.phase ?? ""] ?? "")
 
@@ -28,47 +27,45 @@ onMounted(startStore)
 </script>
 
 <template>
-  <div class="flex h-full">
-    <nav class="flex w-[76px] shrink-0 flex-col items-center gap-1 border-r border-line-gold/60 bg-panel/80 py-4">
-      <div class="mb-4 grid size-11 place-items-center rounded-full border border-gold bg-bg">
-        <img v-if="summonerIcon" :src="summonerIcon" alt="" class="size-full rounded-full object-cover" />
-        <span v-else class="title-gold text-lg">LH</span>
+  <div class="flex h-full flex-col">
+    <header class="flex h-14 shrink-0 items-center gap-6 border-b border-line bg-panel px-5">
+      <div class="flex items-center gap-2.5">
+        <div class="grid size-8 place-items-center overflow-hidden rounded-lg bg-accent text-sm font-black text-bg">
+          <img v-if="summonerIcon" :src="summonerIcon" alt="" class="size-full object-cover" />
+          <span v-else>LH</span>
+        </div>
+        <span class="text-sm font-semibold text-ink">队友助手</span>
       </div>
-      <button
-        v-for="item in nav"
-        :key="item.id"
-        type="button"
-        class="group relative flex w-full flex-col items-center gap-1 py-2.5 text-[11px] transition-colors"
-        :class="page === item.id ? 'text-gold-bright' : 'text-muted hover:text-ink'"
-        @click="page = item.id"
-      >
-        <span v-if="page === item.id" class="absolute left-0 top-2 h-[calc(100%-1rem)] w-[3px] bg-gold" />
-        <component :is="item.icon" class="size-5" />
-        {{ item.label }}
-      </button>
-    </nav>
 
-    <div class="flex min-w-0 flex-1 flex-col">
-      <header class="flex h-14 shrink-0 items-center justify-between border-b border-line px-6">
-        <div>
-          <h1 class="title-gold text-lg leading-tight">{{ titles[page] }}</h1>
-          <p class="eyebrow leading-none">Teammate Helper</p>
-        </div>
-        <div class="flex items-center gap-3 text-xs">
-          <span v-if="summoner?.gameName" class="text-muted">{{ summoner.gameName }}</span>
-          <span v-if="status?.connected && phaseLabel" class="rounded-sm border border-line px-2 py-0.5 text-muted">{{ phaseLabel }}</span>
-          <span class="flex items-center gap-1.5" :class="status?.connected ? 'text-win' : 'text-loss'">
-            <span class="size-2 rounded-full" :class="status?.connected ? 'bg-win shadow-[0_0_8px_var(--color-win)]' : 'bg-loss'" />
-            {{ status?.connected ? "客户端已连接" : "未连接" }}
-          </span>
-        </div>
-      </header>
+      <nav class="flex h-full items-stretch gap-1">
+        <button
+          v-for="item in nav"
+          :key="item.id"
+          type="button"
+          class="relative flex items-center gap-2 px-3 text-[13px] transition-colors"
+          :class="page === item.id ? 'font-semibold text-ink' : 'text-muted hover:text-ink'"
+          @click="page = item.id"
+        >
+          <component :is="item.icon" class="size-4" />
+          {{ item.label }}
+          <span v-if="page === item.id" class="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-accent" />
+        </button>
+      </nav>
 
-      <main class="min-h-0 flex-1 overflow-y-auto p-5">
-        <LiveView v-show="page === 'live'" @goto="goto" />
-        <CareerView v-if="page === 'career'" />
-        <DiagnosticsView v-if="page === 'diagnostics'" />
-      </main>
-    </div>
+      <div class="ml-auto flex items-center gap-3 text-xs">
+        <span v-if="summoner?.gameName" class="text-muted">{{ summoner.gameName }}</span>
+        <span v-if="status?.connected && phaseLabel" class="rounded bg-panel-3 px-2 py-0.5 text-ink">{{ phaseLabel }}</span>
+        <span class="flex items-center gap-1.5 rounded-full bg-panel-2 px-2.5 py-1" :class="status?.connected ? 'text-good' : 'text-loss'">
+          <span class="size-1.5 rounded-full" :class="status?.connected ? 'bg-good' : 'bg-loss'" />
+          {{ status?.connected ? "客户端已连接" : "未连接" }}
+        </span>
+      </div>
+    </header>
+
+    <main class="min-h-0 flex-1 overflow-y-auto p-5">
+      <LiveView v-show="page === 'live'" @goto="goto" />
+      <CareerView v-if="page === 'career'" />
+      <DiagnosticsView v-if="page === 'diagnostics'" />
+    </main>
   </div>
 </template>

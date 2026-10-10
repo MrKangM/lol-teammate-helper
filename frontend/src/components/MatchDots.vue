@@ -10,8 +10,8 @@ defineProps<{ matches: types.RecentMatchSummary[] }>()
     <span
       v-for="(m, i) in [...matches].reverse()"
       :key="i"
-      class="h-3 w-[7px] rounded-[1px]"
-      :class="m.win ? 'bg-win' : 'bg-loss/80'"
+      class="h-[14px] w-[6px] rounded-[2px]"
+      :class="m.win ? 'bg-win' : 'bg-loss'"
       :title="`${m.championName} ${m.kills}/${m.deaths}/${m.assists}`"
     />
   </div>
